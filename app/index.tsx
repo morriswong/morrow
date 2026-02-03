@@ -13,14 +13,14 @@ import { colors, spacing, borderRadius, typography } from '../constants';
 import { useAlarmStore } from '../stores';
 import { AlarmCard, AlarmListItem } from '../components/alarm';
 import { SectionTitle } from '../components/ui';
-import { formatTimeUntilAlarm, getNextEnabledAlarm } from '../utils';
+import { formatTimeUntilAlarm, getNextEnabledAlarm, sortAlarmsByTimeAndDay } from '../utils';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { alarms, toggleAlarm } = useAlarmStore();
 
   const nextAlarm = getNextEnabledAlarm(alarms);
-  const otherAlarms = alarms.filter((a) => a.id !== nextAlarm?.id);
+  const allAlarmsSorted = sortAlarmsByTimeAndDay(alarms);
 
   const handleAddAlarm = () => {
     router.push('/alarm/new');
@@ -68,15 +68,15 @@ export default function HomeScreen() {
         {/* All Alarms Section */}
         <View style={styles.listSection}>
           <SectionTitle title="All alarms" action={<AddButton />} />
-          {otherAlarms.length > 0 && (
+          {allAlarmsSorted.length > 0 && (
             <View style={styles.alarmListContainer}>
-              {otherAlarms.map((alarm, index) => (
+              {allAlarmsSorted.map((alarm, index) => (
                 <AlarmListItem
                   key={alarm.id}
                   alarm={alarm}
                   onPress={() => handleEditAlarm(alarm.id)}
                   onToggle={() => toggleAlarm(alarm.id)}
-                  isLast={index === otherAlarms.length - 1}
+                  isLast={index === allAlarmsSorted.length - 1}
                 />
               ))}
             </View>
