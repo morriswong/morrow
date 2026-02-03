@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,15 +6,14 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius, typography } from '../../constants';
+import { colors, spacing, typography } from '../../constants';
 import { useAlarmStore, useDraftAlarmStore } from '../../stores';
 import { createDefaultAlarm } from '../../utils';
-import { TopNav, Button, Card, Entry, DayPicker, Slider } from '../../components/ui';
+import { TopNav, Button, Card, Entry, DayPicker, Slider, PageTitle } from '../../components/ui';
 import { TimePicker, SnoozePicker } from '../../components/alarm';
 import { SnoozeDuration } from '../../types';
 
@@ -55,24 +54,35 @@ export default function NewAlarmScreen() {
     updateDraft({ skipHolidays: value });
   };
 
+  const handleToggleEnabled = (value: boolean) => {
+    updateDraft({ isEnabled: value });
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        <TopNav
-          title="Add Alarm"
-          rightAction={
-            <Button title="Save" variant="text" onPress={handleSave} />
-          }
-        />
+        <TopNav variant="close" />
 
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* Page Title with Toggle */}
+          <PageTitle
+            title={draft.label}
+            showEditIcon
+            editable
+            onTitleChange={(text) => updateDraft({ label: text })}
+            placeholder="Alarm"
+            showToggle
+            toggleValue={draft.isEnabled}
+            onToggleChange={handleToggleEnabled}
+          />
+
           {/* Time Picker */}
           <View style={styles.timePickerContainer}>
             <TimePicker
@@ -83,81 +93,105 @@ export default function NewAlarmScreen() {
             />
           </View>
 
-          {/* Label Input */}
-          <Card style={styles.section}>
-            <TextInput
-              style={styles.labelInput}
-              value={draft.label}
-              onChangeText={(text) => updateDraft({ label: text })}
-              placeholder="Alarm label"
-              placeholderTextColor={colors.textTertiary}
-            />
-          </Card>
-
-          {/* Repeat Days */}
-          <Card style={styles.section}>
-            <Text style={styles.sectionLabel}>Repeat</Text>
+          {/* When Section - Day Picker */}
+          <View style={styles.sectionTitleContainer}>
+            <Text style={styles.sectionTitle}>When</Text>
+          </View>
+          <View style={styles.dayPickerContainer}>
             <DayPicker
               selectedDays={draft.repeatDays}
               onDaysChange={handleDaysChange}
             />
-          </Card>
-
-          {/* Skip Holidays */}
-          <View style={styles.entryContainer}>
-            <Entry
-              variant="toggle"
-              label="Skip holidays"
-              sublabel={draft.skipHolidays ? 'Will skip public holidays' : undefined}
-              icon={<Ionicons name="calendar-outline" size={24} color={colors.textSecondary} />}
-              value={draft.skipHolidays}
-              onValueChange={handleSkipHolidaysToggle}
-            />
           </View>
 
-          {draft.skipHolidays && (
-            <View style={styles.entryContainer}>
+          {/* Skip Holidays Card */}
+          <View style={styles.cardContainer}>
+            <Card style={styles.combinedCard}>
+              <Entry
+                variant="toggle"
+                label="Skip holidays"
+                sublabel={draft.skipHolidays ? 'Will skip public holidays' : undefined}
+                icon={<Ionicons name="calendar-outline" size={20} color={colors.white} />}
+                iconBackgroundColor={colors.accentBrandDark}
+                value={draft.skipHolidays}
+                onValueChange={handleSkipHolidaysToggle}
+                noBackground
+                noBorderRadius
+              />
+              {draft.skipHolidays && (
+                <Entry
+                  variant="selection"
+                  label="Holiday calendar"
+                  value={draft.holidayCalendarId ? 'US Holidays' : 'Select'}
+                  onPress={() => router.push('/holidays')}
+                  noBackground
+                  noBorderRadius
+                />
+              )}
+            </Card>
+          </View>
+
+          {/* Sound Section */}
+          <View style={styles.cardContainer}>
+            <Card style={styles.combinedCard}>
               <Entry
                 variant="selection"
-                label="Holiday calendar"
-                value={draft.holidayCalendarId ? 'US Holidays' : 'Select'}
-                icon={<Ionicons name="globe-outline" size={24} color={colors.textSecondary} />}
-                onPress={() => router.push('/holidays')}
+                label="Sound"
+                sublabel={`${draft.soundSettings.voiceStyle === 'female' ? 'Female' : 'Male'} voice`}
+                icon={<Ionicons name="musical-notes-outline" size={20} color={colors.white} />}
+                iconBackgroundColor={colors.accentBrandDark}
+                onPress={() => router.push('/sound')}
+                noBackground
+                noBorderRadius
               />
-            </View>
-          )}
-
-          {/* Sound Settings */}
-          <View style={styles.entryContainer}>
-            <Entry
-              variant="selection"
-              label="Sound"
-              value={`${draft.soundSettings.voiceStyle === 'female' ? 'Female' : 'Male'} • ${draft.soundSettings.language}`}
-              icon={<Ionicons name="musical-notes-outline" size={24} color={colors.textSecondary} />}
-              onPress={() => router.push('/sound')}
-            />
+              <View style={styles.sliderContainer}>
+                <Slider
+                  value={draft.volume}
+                  onValueChange={handleVolumeChange}
+                  min={0}
+                  max={100}
+                  showIcons
+                />
+              </View>
+            </Card>
           </View>
 
-          {/* Volume */}
-          <Card style={styles.section}>
-            <Text style={styles.sectionLabel}>Volume</Text>
-            <Slider
-              value={draft.volume}
-              onValueChange={handleVolumeChange}
-              min={0}
-              max={100}
-            />
-          </Card>
-
           {/* Snooze Duration */}
-          <Card style={styles.section}>
-            <Text style={styles.sectionLabel}>Snooze duration</Text>
-            <SnoozePicker
-              value={draft.snoozeDuration}
-              onValueChange={handleSnoozeDurationChange}
+          <View style={styles.cardContainer}>
+            <Card style={styles.snoozeCard}>
+              <View style={styles.snoozeHeader}>
+                <View style={styles.snoozeIconContainer}>
+                  <Ionicons name="alarm-outline" size={20} color={colors.white} />
+                </View>
+                <Text style={styles.snoozeLabel}>Snooze duration</Text>
+              </View>
+              <SnoozePicker
+                value={draft.snoozeDuration}
+                onValueChange={handleSnoozeDurationChange}
+              />
+            </Card>
+          </View>
+
+          {/* Delete Button Placeholder (only show in edit mode) */}
+          <View style={styles.deleteButtonContainer}>
+            <Button
+              title="Delete alarm"
+              variant="dangerOutline"
+              onPress={() => router.back()}
+              fullWidth
             />
-          </Card>
+          </View>
         </ScrollView>
+
+        {/* Fixed Save Button at Bottom */}
+        <View style={styles.saveButtonContainer}>
+          <Button
+            title="Save"
+            variant="accentTranslucent"
+            onPress={handleSave}
+            fullWidth
+          />
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -172,30 +206,72 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: spacing['3xl'],
+    paddingBottom: 100,
   },
   timePickerContainer: {
-    paddingVertical: spacing['2xl'],
-    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
-  section: {
-    marginHorizontal: spacing.lg,
+  sectionTitleContainer: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  sectionTitle: {
+    ...typography.body,
+    color: colors.textSecondary,
+  },
+  dayPickerContainer: {
+    paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
   },
-  sectionLabel: {
-    ...typography.labelSmall,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  labelInput: {
-    ...typography.body,
-    color: colors.textPrimary,
-    padding: 0,
-  },
-  entryContainer: {
+  cardContainer: {
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
+  },
+  combinedCard: {
+    padding: 0,
+    overflow: 'hidden',
+  },
+  sliderContainer: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.sm,
+  },
+  snoozeCard: {
+    padding: spacing.lg,
+  },
+  snoozeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  snoozeIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: colors.accentBrandDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  snoozeLabel: {
+    ...typography.body,
+    color: colors.textPrimary,
+  },
+  deleteButtonContainer: {
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.xl,
+    marginBottom: spacing.lg,
+  },
+  saveButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    paddingBottom: spacing.xl,
+    backgroundColor: colors.background,
   },
 });
