@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   useFonts,
   Outfit_400Regular,
@@ -34,7 +35,7 @@ export default function RootLayout() {
   }
 
   return (
-    <View style={styles.container}>
+    <GestureHandlerRootView style={styles.container}>
       <StatusBar style="light" />
       <Stack
         screenOptions={{
@@ -51,7 +52,7 @@ export default function RootLayout() {
         <Stack.Screen name="holidays/index" />
         <Stack.Screen name="holidays/calendar" />
       </Stack>
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
