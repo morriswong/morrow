@@ -130,3 +130,26 @@ export function createDefaultAlarm(): Alarm {
     snoozeDuration: 5,
   };
 }
+
+export function sortAlarmsByTimeAndDay(alarms: Alarm[]): Alarm[] {
+  return [...alarms].sort((a, b) => {
+    // Convert to minutes from midnight (24-hour format)
+    const getMinutes = (alarm: Alarm) => {
+      let hour24 = alarm.hour;
+      if (alarm.isAM && alarm.hour === 12) hour24 = 0; // 12 AM = 0
+      else if (!alarm.isAM && alarm.hour !== 12) hour24 = alarm.hour + 12; // PM (not 12 PM)
+      return hour24 * 60 + alarm.minute;
+    };
+
+    const timeA = getMinutes(a);
+    const timeB = getMinutes(b);
+
+    // Primary sort: by time (early to late)
+    if (timeA !== timeB) return timeA - timeB;
+
+    // Secondary sort: by earliest repeatDay (Monday=0 first)
+    const dayA = a.repeatDays.length > 0 ? Math.min(...a.repeatDays) : 0;
+    const dayB = b.repeatDays.length > 0 ? Math.min(...b.repeatDays) : 0;
+    return dayA - dayB;
+  });
+}

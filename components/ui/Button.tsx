@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { colors, spacing, borderRadius, typography } from '../../constants';
 
-type ButtonVariant = 'primary' | 'secondary' | 'text' | 'danger' | 'icon';
+type ButtonVariant = 'primary' | 'secondary' | 'text' | 'danger' | 'icon' | 'accentTranslucent' | 'dangerOutline';
 
 interface ButtonProps {
   title?: string;
@@ -105,6 +105,14 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: borderRadius.full,
   },
+  accentTranslucent: {
+    backgroundColor: colors.accentBrandTranslucent,
+  },
+  dangerOutline: {
+    backgroundColor: colors.dangerLight,
+    borderWidth: 1,
+    borderColor: colors.dangerPrimary,
+  },
   disabled: {
     backgroundColor: colors.disabled,
     opacity: 0.6,
@@ -129,6 +137,14 @@ const styles = StyleSheet.create({
   iconText: {
     ...typography.label,
     color: colors.textPrimary,
+  },
+  accentTranslucentText: {
+    ...typography.label,
+    color: colors.white,
+  },
+  dangerOutlineText: {
+    ...typography.label,
+    color: colors.dangerPrimary,
   },
   disabledText: {
     color: colors.textTertiary,

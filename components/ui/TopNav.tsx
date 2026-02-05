@@ -4,11 +4,14 @@ import { useRouter } from 'expo-router';
 import { colors, spacing, typography } from '../../constants';
 import { Ionicons } from '@expo/vector-icons';
 
+type TopNavVariant = 'default' | 'close';
+
 interface TopNavProps {
   title?: string;
   showBack?: boolean;
   rightAction?: React.ReactNode;
   onBackPress?: () => void;
+  variant?: TopNavVariant;
 }
 
 export function TopNav({
@@ -16,6 +19,7 @@ export function TopNav({
   showBack = true,
   rightAction,
   onBackPress,
+  variant = 'default',
 }: TopNavProps) {
   const router = useRouter();
 
@@ -27,16 +31,30 @@ export function TopNav({
     }
   };
 
+  const renderLeftButton = () => {
+    if (!showBack) return null;
+
+    if (variant === 'close') {
+      return (
+        <TouchableOpacity onPress={handleBack} style={styles.closeButton}>
+          <Ionicons name="close" size={20} color={colors.white} />
+        </TouchableOpacity>
+      );
+    }
+
+    return (
+      <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+        <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.left}>
-        {showBack && (
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-        )}
+        {renderLeftButton()}
       </View>
-      {title && (
+      {title && variant !== 'close' && (
         <Text style={styles.title} numberOfLines={1}>
           {title}
         </Text>
@@ -66,6 +84,14 @@ const styles = StyleSheet.create({
   backButton: {
     padding: spacing.xs,
     marginLeft: -spacing.xs,
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.accentBrandDark,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     ...typography.h3,

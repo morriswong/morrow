@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, typography } from '../../constants';
 import { Toggle } from './Toggle';
@@ -10,8 +10,12 @@ interface BaseEntryProps {
   label: string;
   sublabel?: string;
   icon?: React.ReactNode;
+  iconBackgroundColor?: string;
   onPress?: () => void;
   disabled?: boolean;
+  noBorderRadius?: boolean;
+  noBackground?: boolean;
+  children?: React.ReactNode;
 }
 
 interface ToggleEntryProps extends BaseEntryProps {
@@ -32,7 +36,18 @@ interface DefaultEntryProps extends BaseEntryProps {
 type EntryProps = ToggleEntryProps | SelectionEntryProps | DefaultEntryProps;
 
 export function Entry(props: EntryProps) {
-  const { label, sublabel, icon, onPress, disabled = false, variant = 'base' } = props;
+  const {
+    label,
+    sublabel,
+    icon,
+    iconBackgroundColor,
+    onPress,
+    disabled = false,
+    variant = 'base',
+    noBorderRadius = false,
+    noBackground = false,
+    children,
+  } = props;
 
   const renderRight = () => {
     if (variant === 'toggle') {
@@ -57,9 +72,39 @@ export function Entry(props: EntryProps) {
     return null;
   };
 
+  const containerStyle: ViewStyle[] = [styles.container];
+
+  if (disabled) {
+    containerStyle.push(styles.disabled);
+  }
+
+  if (noBorderRadius) {
+    containerStyle.push({ borderRadius: 0 });
+  }
+
+  if (noBackground) {
+    containerStyle.push({ backgroundColor: 'transparent' });
+  }
+
   const content = (
-    <View style={[styles.container, disabled && styles.disabled]}>
-      {icon && <View style={styles.iconContainer}>{icon}</View>}
+    <View style={containerStyle}>
+      {icon && (
+        <View
+          style={[
+            styles.iconContainer,
+            iconBackgroundColor && {
+              backgroundColor: iconBackgroundColor,
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              alignItems: 'center',
+              justifyContent: 'center',
+            },
+          ]}
+        >
+          {icon}
+        </View>
+      )}
       <View style={styles.textContainer}>
         <Text style={styles.label}>{label}</Text>
         {sublabel && <Text style={styles.sublabel}>{sublabel}</Text>}
@@ -68,15 +113,24 @@ export function Entry(props: EntryProps) {
     </View>
   );
 
+  const wrappedContent = children ? (
+    <View>
+      {content}
+      {children}
+    </View>
+  ) : (
+    content
+  );
+
   if (onPress && variant !== 'toggle') {
     return (
       <TouchableOpacity onPress={onPress} disabled={disabled} activeOpacity={0.7}>
-        {content}
+        {wrappedContent}
       </TouchableOpacity>
     );
   }
 
-  return content;
+  return wrappedContent;
 }
 
 const styles = StyleSheet.create({

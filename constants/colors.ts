@@ -28,6 +28,14 @@ export const colors = {
   white: '#FFFFFF',
   black: '#000000',
   transparent: 'transparent',
+
+  // Accent variants
+  accentBrandTranslucent: 'rgba(81, 30, 227, 0.5)',
+  accentBrandDark: '#361673',
+
+  // Danger colors
+  dangerPrimary: '#AD1C19',
+  dangerLight: 'rgba(173, 28, 25, 0.1)',
 } as const;
 
 export type ColorKey = keyof typeof colors;
