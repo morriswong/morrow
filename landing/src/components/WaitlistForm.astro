@@ -1,0 +1,142 @@
+<section class="waitlist" id="waitlist">
+  <div class="waitlist-inner">
+    <h2 class="waitlist-title">Be the first to rise</h2>
+    <p class="waitlist-subtitle">
+      Join the waitlist and we'll let you know when Morrow is ready.
+    </p>
+    <form class="waitlist-form" id="waitlist-form">
+      <input
+        type="email"
+        class="waitlist-input"
+        placeholder="you@example.com"
+        required
+        aria-label="Email address"
+        id="waitlist-email"
+      />
+      <button type="submit" class="waitlist-button" id="waitlist-submit">
+        Join Waitlist
+      </button>
+    </form>
+    <p class="waitlist-note">No spam, ever. We'll only email you about Morrow.</p>
+    <p class="waitlist-success" id="waitlist-success" hidden>
+      You're on the list! We'll be in touch.
+    </p>
+  </div>
+</section>
+
+<style>
+  .waitlist {
+    padding: var(--spacing-6xl) var(--spacing-lg);
+    text-align: center;
+    background:
+      radial-gradient(
+        ellipse at 50% 100%,
+        rgba(81, 30, 227, 0.15) 0%,
+        transparent 60%
+      ),
+      var(--color-background);
+  }
+
+  .waitlist-inner {
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .waitlist-title {
+    font-size: var(--font-size-3xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .waitlist-subtitle {
+    font-size: var(--font-size-lg);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-3xl);
+  }
+
+  .waitlist-form {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .waitlist-input {
+    flex: 1;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-base);
+    outline: none;
+    transition: border-color 0.2s ease;
+  }
+
+  .waitlist-input::placeholder {
+    color: var(--color-text-tertiary);
+  }
+
+  .waitlist-input:focus {
+    border-color: var(--color-accent);
+  }
+
+  .waitlist-button {
+    padding: var(--spacing-md) var(--spacing-2xl);
+    border-radius: var(--radius-lg);
+    border: none;
+    background-color: var(--color-accent);
+    color: var(--color-white);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+    cursor: pointer;
+    transition:
+      background-color 0.2s ease,
+      transform 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .waitlist-button:hover {
+    background-color: var(--color-accent-light);
+    transform: translateY(-1px);
+  }
+
+  .waitlist-button:active {
+    transform: translateY(0);
+  }
+
+  .waitlist-note {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-tertiary);
+  }
+
+  .waitlist-success {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-success);
+    margin-top: var(--spacing-lg);
+  }
+
+  @media (max-width: 480px) {
+    .waitlist-form {
+      flex-direction: column;
+    }
+  }
+</style>
+
+<script>
+  const form = document.getElementById('waitlist-form') as HTMLFormElement;
+  const email = document.getElementById('waitlist-email') as HTMLInputElement;
+  const success = document.getElementById(
+    'waitlist-success',
+  ) as HTMLParagraphElement;
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    // UI-only: no backend call yet
+    console.log('Waitlist signup (UI only):', email.value);
+    form.hidden = true;
+    success.hidden = false;
+    document.querySelector('.waitlist-note')?.setAttribute('hidden', '');
+  });
+</script>
