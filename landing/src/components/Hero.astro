@@ -1,0 +1,95 @@
+<section class="hero" id="hero">
+  <div class="hero-content">
+    <p class="hero-badge">Coming Soon</p>
+    <h1 class="hero-title">
+      Wake up on <span class="hero-title-accent">your terms</span>
+    </h1>
+    <p class="hero-subtitle">
+      Morrow is the alarm clock that respects your sleep. Smart scheduling,
+      gentle wake-ups, and holiday awareness — all wrapped in a beautiful
+      experience.
+    </p>
+    <a href="#waitlist" class="hero-cta">Join the Waitlist</a>
+  </div>
+</section>
+
+<style>
+  .hero {
+    min-height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--spacing-3xl) var(--spacing-lg);
+    background:
+      radial-gradient(
+        ellipse at 50% 0%,
+        rgba(81, 30, 227, 0.25) 0%,
+        transparent 60%
+      ),
+      var(--color-background);
+  }
+
+  .hero-content {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .hero-badge {
+    display: inline-block;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-accent-light);
+    background-color: var(--color-accent-translucent);
+    padding: var(--spacing-xs) var(--spacing-lg);
+    border-radius: var(--radius-full);
+    margin-bottom: var(--spacing-3xl);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .hero-title {
+    font-size: clamp(var(--font-size-4xl), 8vw, var(--font-size-7xl));
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-tight);
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-2xl);
+  }
+
+  .hero-title-accent {
+    background: linear-gradient(135deg, var(--color-accent-light), #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-subtitle {
+    font-size: var(--font-size-lg);
+    line-height: var(--line-height-relaxed);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-4xl);
+    max-width: 540px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hero-cta {
+    display: inline-block;
+    background-color: var(--color-accent);
+    color: var(--color-white);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+    padding: var(--spacing-md) var(--spacing-3xl);
+    border-radius: var(--radius-lg);
+    text-decoration: none;
+    transition:
+      background-color 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  .hero-cta:hover {
+    background-color: var(--color-accent-light);
+    text-decoration: none;
+    transform: translateY(-1px);
+  }
+</style>
