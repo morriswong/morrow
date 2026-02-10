@@ -1,7 +1,12 @@
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useSharedValue, runOnJS } from 'react-native-reanimated';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  runOnJS,
+} from 'react-native-reanimated';
 import { colors, spacing, fontFamily, borderRadius } from '../../constants';
 
 interface TimePickerProps {
@@ -14,7 +19,9 @@ interface TimePickerProps {
 const hours = Array.from({ length: 12 }, (_, i) => i + 1);
 const minutes = Array.from({ length: 60 }, (_, i) => i);
 
-const SWIPE_THRESHOLD = 30;
+const ITEM_HEIGHT = 50;
+const VELOCITY_FACTOR = 0.15;
+const MAX_MOMENTUM_TICKS = 8;
 
 export function TimePicker({ hour, minute, isAM, onTimeChange }: TimePickerProps) {
   const currentHourIndex = hours.indexOf(hour === 0 ? 12 : hour);
@@ -22,6 +29,22 @@ export function TimePicker({ hour, minute, isAM, onTimeChange }: TimePickerProps
 
   const hourTranslateY = useSharedValue(0);
   const minuteTranslateY = useSharedValue(0);
+
+  const hourStartIndex = useSharedValue(0);
+  const minuteStartIndex = useSharedValue(0);
+  const hourAppliedTicks = useSharedValue(0);
+  const minuteAppliedTicks = useSharedValue(0);
+
+  const currentHourIndexShared = useSharedValue(currentHourIndex);
+  const currentMinuteIndexShared = useSharedValue(currentMinuteIndex);
+
+  useEffect(() => {
+    currentHourIndexShared.value = currentHourIndex;
+  }, [currentHourIndex]);
+
+  useEffect(() => {
+    currentMinuteIndexShared.value = currentMinuteIndex;
+  }, [currentMinuteIndex]);
 
   const getAdjacentValues = (arr: number[], currentIndex: number) => {
     const len = arr.length;
@@ -47,37 +70,103 @@ export function TimePicker({ hour, minute, isAM, onTimeChange }: TimePickerProps
     onTimeChange(hour, minutes[newIndex], isAM);
   };
 
+  const setHourByIndex = useCallback((index: number) => {
+    const wrappedIndex = ((index % hours.length) + hours.length) % hours.length;
+    onTimeChange(hours[wrappedIndex], minute, isAM);
+  }, [minute, isAM, onTimeChange]);
+
+  const setMinuteByIndex = useCallback((index: number) => {
+    const wrappedIndex = ((index % minutes.length) + minutes.length) % minutes.length;
+    onTimeChange(hour, minutes[wrappedIndex], isAM);
+  }, [hour, isAM, onTimeChange]);
+
   const hourGesture = Gesture.Pan()
+    .activeOffsetY([-10, 10])
     .onStart(() => {
+      hourStartIndex.value = currentHourIndexShared.value;
+      hourAppliedTicks.value = 0;
       hourTranslateY.value = 0;
     })
     .onUpdate((event) => {
-      hourTranslateY.value = event.translationY;
+      const totalTicks = Math.round(-event.translationY / ITEM_HEIGHT);
+      hourTranslateY.value = event.translationY + totalTicks * ITEM_HEIGHT;
+
+      if (totalTicks !== hourAppliedTicks.value) {
+        hourAppliedTicks.value = totalTicks;
+        const targetIndex = hourStartIndex.value + totalTicks;
+        runOnJS(setHourByIndex)(targetIndex);
+      }
     })
     .onEnd((event) => {
-      if (event.translationY < -SWIPE_THRESHOLD) {
-        runOnJS(changeHour)(1);
-      } else if (event.translationY > SWIPE_THRESHOLD) {
-        runOnJS(changeHour)(-1);
+      const velocityTicks = Math.round(
+        (-event.velocityY * VELOCITY_FACTOR) / ITEM_HEIGHT
+      );
+      const clampedMomentum = Math.max(
+        -MAX_MOMENTUM_TICKS,
+        Math.min(MAX_MOMENTUM_TICKS, velocityTicks)
+      );
+
+      const finalTicks = hourAppliedTicks.value + clampedMomentum;
+      if (finalTicks !== hourAppliedTicks.value) {
+        const targetIndex = hourStartIndex.value + finalTicks;
+        runOnJS(setHourByIndex)(targetIndex);
       }
-      hourTranslateY.value = 0;
+
+      hourTranslateY.value = withSpring(0, {
+        velocity: event.velocityY * 0.3,
+        damping: 20,
+        stiffness: 200,
+        mass: 0.5,
+      });
     });
 
   const minuteGesture = Gesture.Pan()
+    .activeOffsetY([-10, 10])
     .onStart(() => {
+      minuteStartIndex.value = currentMinuteIndexShared.value;
+      minuteAppliedTicks.value = 0;
       minuteTranslateY.value = 0;
     })
     .onUpdate((event) => {
-      minuteTranslateY.value = event.translationY;
+      const totalTicks = Math.round(-event.translationY / ITEM_HEIGHT);
+      minuteTranslateY.value = event.translationY + totalTicks * ITEM_HEIGHT;
+
+      if (totalTicks !== minuteAppliedTicks.value) {
+        minuteAppliedTicks.value = totalTicks;
+        const targetIndex = minuteStartIndex.value + totalTicks;
+        runOnJS(setMinuteByIndex)(targetIndex);
+      }
     })
     .onEnd((event) => {
-      if (event.translationY < -SWIPE_THRESHOLD) {
-        runOnJS(changeMinute)(1);
-      } else if (event.translationY > SWIPE_THRESHOLD) {
-        runOnJS(changeMinute)(-1);
+      const velocityTicks = Math.round(
+        (-event.velocityY * VELOCITY_FACTOR) / ITEM_HEIGHT
+      );
+      const clampedMomentum = Math.max(
+        -MAX_MOMENTUM_TICKS,
+        Math.min(MAX_MOMENTUM_TICKS, velocityTicks)
+      );
+
+      const finalTicks = minuteAppliedTicks.value + clampedMomentum;
+      if (finalTicks !== minuteAppliedTicks.value) {
+        const targetIndex = minuteStartIndex.value + finalTicks;
+        runOnJS(setMinuteByIndex)(targetIndex);
       }
-      minuteTranslateY.value = 0;
+
+      minuteTranslateY.value = withSpring(0, {
+        velocity: event.velocityY * 0.3,
+        damping: 20,
+        stiffness: 200,
+        mass: 0.5,
+      });
     });
+
+  const hourAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: hourTranslateY.value }],
+  }));
+
+  const minuteAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: minuteTranslateY.value }],
+  }));
 
   const handlePeriodChange = (newIsAM: boolean) => {
     onTimeChange(hour, minute, newIsAM);
@@ -91,16 +180,18 @@ export function TimePicker({ hour, minute, isAM, onTimeChange }: TimePickerProps
         <View style={styles.pickerContainer}>
           {/* Hour Column */}
           <GestureDetector gesture={hourGesture}>
-            <Animated.View style={styles.column}>
-              <TouchableOpacity onPress={() => changeHour(-1)} style={styles.adjacentItem}>
-                <Text style={styles.adjacentText}>{formatNumber(hourValues.prev)}</Text>
-              </TouchableOpacity>
-              <View style={styles.currentItem}>
-                <Text style={styles.currentText}>{formatNumber(hourValues.current)}</Text>
-              </View>
-              <TouchableOpacity onPress={() => changeHour(1)} style={styles.adjacentItem}>
-                <Text style={styles.adjacentText}>{formatNumber(hourValues.next)}</Text>
-              </TouchableOpacity>
+            <Animated.View style={styles.columnClip}>
+              <Animated.View style={[styles.column, hourAnimatedStyle]}>
+                <TouchableOpacity onPress={() => changeHour(-1)} style={styles.adjacentItem}>
+                  <Text style={styles.adjacentText}>{formatNumber(hourValues.prev)}</Text>
+                </TouchableOpacity>
+                <View style={styles.currentItem}>
+                  <Text style={styles.currentText}>{formatNumber(hourValues.current)}</Text>
+                </View>
+                <TouchableOpacity onPress={() => changeHour(1)} style={styles.adjacentItem}>
+                  <Text style={styles.adjacentText}>{formatNumber(hourValues.next)}</Text>
+                </TouchableOpacity>
+              </Animated.View>
             </Animated.View>
           </GestureDetector>
 
@@ -108,16 +199,18 @@ export function TimePicker({ hour, minute, isAM, onTimeChange }: TimePickerProps
 
           {/* Minute Column */}
           <GestureDetector gesture={minuteGesture}>
-            <Animated.View style={styles.column}>
-              <TouchableOpacity onPress={() => changeMinute(-1)} style={styles.adjacentItem}>
-                <Text style={styles.adjacentText}>{formatNumber(minuteValues.prev)}</Text>
-              </TouchableOpacity>
-              <View style={styles.currentItem}>
-                <Text style={styles.currentText}>{formatNumber(minuteValues.current)}</Text>
-              </View>
-              <TouchableOpacity onPress={() => changeMinute(1)} style={styles.adjacentItem}>
-                <Text style={styles.adjacentText}>{formatNumber(minuteValues.next)}</Text>
-              </TouchableOpacity>
+            <Animated.View style={styles.columnClip}>
+              <Animated.View style={[styles.column, minuteAnimatedStyle]}>
+                <TouchableOpacity onPress={() => changeMinute(-1)} style={styles.adjacentItem}>
+                  <Text style={styles.adjacentText}>{formatNumber(minuteValues.prev)}</Text>
+                </TouchableOpacity>
+                <View style={styles.currentItem}>
+                  <Text style={styles.currentText}>{formatNumber(minuteValues.current)}</Text>
+                </View>
+                <TouchableOpacity onPress={() => changeMinute(1)} style={styles.adjacentItem}>
+                  <Text style={styles.adjacentText}>{formatNumber(minuteValues.next)}</Text>
+                </TouchableOpacity>
+              </Animated.View>
             </Animated.View>
           </GestureDetector>
 
@@ -157,8 +250,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  column: {
+  columnClip: {
     width: 90,
+    overflow: 'hidden',
+    alignItems: 'center',
+  },
+  column: {
     alignItems: 'center',
     gap: 8,
   },
