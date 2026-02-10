@@ -4,8 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - claude/add-waitlist-landing-page-I4Fih
-      - main
+      - master
     paths:
       - 'landing/**'
       - '.github/workflows/deploy-landing.yml'
