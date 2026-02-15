@@ -79,7 +79,7 @@ export function PageTitle({
               </Text>
               {showEditIcon && (
                 <TouchableOpacity onPress={handleEditPress} style={styles.editButton}>
-                  <Ionicons name="pencil" size={18} color={colors.textSecondary} />
+                  <Ionicons name="pencil" size={18} color={colors.accent} />
                 </TouchableOpacity>
               )}
             </>

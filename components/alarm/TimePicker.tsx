@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, runOnJS } from 'react-native-reanimated';
@@ -14,7 +14,7 @@ interface TimePickerProps {
 const hours = Array.from({ length: 12 }, (_, i) => i + 1);
 const minutes = Array.from({ length: 60 }, (_, i) => i);
 
-const SWIPE_THRESHOLD = 30;
+const STEP_THRESHOLD = 30;
 
 export function TimePicker({ hour, minute, isAM, onTimeChange }: TimePickerProps) {
   const currentHourIndex = hours.indexOf(hour === 0 ? 12 : hour);
@@ -22,6 +22,10 @@ export function TimePicker({ hour, minute, isAM, onTimeChange }: TimePickerProps
 
   const hourTranslateY = useSharedValue(0);
   const minuteTranslateY = useSharedValue(0);
+
+  // Track accumulated steps during a continuous gesture
+  const hourStepsRef = useRef(0);
+  const minuteStepsRef = useRef(0);
 
   const getAdjacentValues = (arr: number[], currentIndex: number) => {
     const len = arr.length;
@@ -37,46 +41,83 @@ export function TimePicker({ hour, minute, isAM, onTimeChange }: TimePickerProps
   const hourValues = getAdjacentValues(hours, currentHourIndex);
   const minuteValues = getAdjacentValues(minutes, currentMinuteIndex);
 
-  const changeHour = (delta: number) => {
-    const newIndex = (currentHourIndex + delta + hours.length) % hours.length;
+  const changeHour = useCallback((delta: number) => {
+    const idx = hours.indexOf(hour === 0 ? 12 : hour);
+    const newIndex = (idx + delta + hours.length) % hours.length;
     onTimeChange(hours[newIndex], minute, isAM);
-  };
+  }, [hour, minute, isAM, onTimeChange]);
 
-  const changeMinute = (delta: number) => {
-    const newIndex = (currentMinuteIndex + delta + minutes.length) % minutes.length;
+  const changeMinute = useCallback((delta: number) => {
+    const newIndex = (minute + delta + minutes.length) % minutes.length;
     onTimeChange(hour, minutes[newIndex], isAM);
-  };
+  }, [hour, minute, isAM, onTimeChange]);
+
+  const onHourGestureStep = useCallback((delta: number) => {
+    changeHour(delta);
+  }, [changeHour]);
+
+  const onMinuteGestureStep = useCallback((delta: number) => {
+    changeMinute(delta);
+  }, [changeMinute]);
+
+  const resetHourSteps = useCallback(() => {
+    hourStepsRef.current = 0;
+  }, []);
+
+  const resetMinuteSteps = useCallback(() => {
+    minuteStepsRef.current = 0;
+  }, []);
 
   const hourGesture = Gesture.Pan()
     .onStart(() => {
       hourTranslateY.value = 0;
+      runOnJS(resetHourSteps)();
     })
     .onUpdate((event) => {
       hourTranslateY.value = event.translationY;
-    })
-    .onEnd((event) => {
-      if (event.translationY < -SWIPE_THRESHOLD) {
-        runOnJS(changeHour)(1);
-      } else if (event.translationY > SWIPE_THRESHOLD) {
-        runOnJS(changeHour)(-1);
+      // Calculate how many steps the gesture has covered
+      const totalSteps = Math.floor(Math.abs(event.translationY) / STEP_THRESHOLD);
+      const direction = event.translationY < 0 ? 1 : -1; // swipe up = increment
+      const signedSteps = totalSteps * direction;
+
+      // Fire a change for each new step crossed
+      if (signedSteps !== 0) {
+        const prevSteps = hourStepsRef.current;
+        if (signedSteps !== prevSteps) {
+          const delta = signedSteps - prevSteps;
+          runOnJS(onHourGestureStep)(delta);
+          hourStepsRef.current = signedSteps;
+        }
       }
+    })
+    .onEnd(() => {
       hourTranslateY.value = 0;
+      runOnJS(resetHourSteps)();
     });
 
   const minuteGesture = Gesture.Pan()
     .onStart(() => {
       minuteTranslateY.value = 0;
+      runOnJS(resetMinuteSteps)();
     })
     .onUpdate((event) => {
       minuteTranslateY.value = event.translationY;
-    })
-    .onEnd((event) => {
-      if (event.translationY < -SWIPE_THRESHOLD) {
-        runOnJS(changeMinute)(1);
-      } else if (event.translationY > SWIPE_THRESHOLD) {
-        runOnJS(changeMinute)(-1);
+      const totalSteps = Math.floor(Math.abs(event.translationY) / STEP_THRESHOLD);
+      const direction = event.translationY < 0 ? 1 : -1;
+      const signedSteps = totalSteps * direction;
+
+      if (signedSteps !== 0) {
+        const prevSteps = minuteStepsRef.current;
+        if (signedSteps !== prevSteps) {
+          const delta = signedSteps - prevSteps;
+          runOnJS(onMinuteGestureStep)(delta);
+          minuteStepsRef.current = signedSteps;
+        }
       }
+    })
+    .onEnd(() => {
       minuteTranslateY.value = 0;
+      runOnJS(resetMinuteSteps)();
     });
 
   const handlePeriodChange = (newIsAM: boolean) => {

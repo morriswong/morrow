@@ -1,4 +1,5 @@
 import { differenceInMinutes, differenceInHours, addDays, setHours, setMinutes, isAfter, isBefore, startOfDay } from 'date-fns';
+import { Platform, NativeModules } from 'react-native';
 import { Alarm } from '../types';
 
 export function generateId(): string {
@@ -7,9 +8,10 @@ export function generateId(): string {
 
 export function getGreeting(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (hour >= 4 && hour < 12) return 'Good morning 💜';
+  if (hour >= 12 && hour < 18) return 'Good afternoon 💜';
+  if (hour >= 18 && hour < 22) return 'Good evening 💜';
+  return 'Sleep tight 💜';
 }
 
 export function formatTimeUntilAlarm(alarm: Alarm): string | null {
@@ -103,28 +105,21 @@ export function getNextEnabledAlarm(alarms: Alarm[]): Alarm | null {
 }
 
 export function createDefaultAlarm(): Alarm {
-  const now = new Date();
-  let hour = now.getHours();
-  const isAM = hour < 12;
-
-  // Convert to 12-hour format
-  if (hour === 0) hour = 12;
-  else if (hour > 12) hour = hour - 12;
-
   return {
     id: generateId(),
     label: 'Alarm',
-    hour,
+    hour: 8,
     minute: 0,
-    isAM,
+    isAM: true,
     isEnabled: true,
     repeatDays: [],
     skipHolidays: false,
     holidayCalendarId: null,
     soundSettings: {
       voiceStyle: 'female',
+      voicePersonality: 'friendly-coach',
       language: 'English',
-      languageCode: 'en-US',
+      languageCode: 'en-GB',
     },
     volume: 70,
     snoozeDuration: 5,
@@ -152,4 +147,67 @@ export function sortAlarmsByTimeAndDay(alarms: Alarm[]): Alarm[] {
     const dayB = b.repeatDays.length > 0 ? Math.min(...b.repeatDays) : 0;
     return dayA - dayB;
   });
+}
+
+// Country code to holiday calendar ID mapping
+const countryToCalendarId: Record<string, string> = {
+  GB: 'uk', US: 'us', AU: 'au', BR: 'br', CA: 'ca',
+  CN: 'cn', DK: 'dk', FR: 'fr', DE: 'de', HK: 'hk',
+  IN: 'in', IT: 'it', JP: 'jp', KR: 'kr', LU: 'lu',
+  MT: 'mt', MX: 'mx', NG: 'ng', PK: 'pk', ES: 'es',
+};
+
+function getDeviceCountryCode(): string | null {
+  try {
+    // Try to get locale from device
+    let locale: string | null = null;
+
+    if (Platform.OS === 'ios') {
+      const settings = NativeModules.SettingsManager?.settings;
+      const languages = settings?.AppleLanguages;
+      if (languages && languages.length > 0) {
+        locale = languages[0];
+      }
+    } else if (Platform.OS === 'android') {
+      locale = NativeModules.I18nManager?.localeIdentifier;
+    }
+
+    // Fallback to Intl API
+    if (!locale) {
+      locale = Intl.DateTimeFormat().resolvedOptions().locale;
+    }
+
+    if (!locale) return null;
+
+    // Extract country code from locale (e.g., "en-GB" -> "GB", "en_US" -> "US")
+    const parts = locale.replace('_', '-').split('-');
+    if (parts.length >= 2) {
+      return parts[parts.length - 1].toUpperCase();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Determines the default holiday calendar ID when enabling skip holidays.
+ * Priority: most recently used calendar from existing alarms > device locale > 'uk'
+ */
+export function getDefaultHolidayCalendarId(alarms: Alarm[]): string {
+  // 1. Check most recently added alarm with a calendar set (search from end)
+  for (let i = alarms.length - 1; i >= 0; i--) {
+    if (alarms[i].holidayCalendarId != null) {
+      return alarms[i].holidayCalendarId!;
+    }
+  }
+
+  // 2. Try to match device locale to a calendar
+  const countryCode = getDeviceCountryCode();
+  if (countryCode && countryToCalendarId[countryCode]) {
+    return countryToCalendarId[countryCode];
+  }
+
+  // 3. Fallback to UK Bank Holidays
+  return 'uk';
 }

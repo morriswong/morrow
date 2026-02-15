@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { colors, spacing, borderRadius, typography } from '../../constants';
+import { colors, spacing, borderRadius, fontFamily } from '../../constants';
 import { SnoozeDuration } from '../../types';
 
-const SNOOZE_DISPLAY_OPTIONS: SnoozeDuration[] = [5, 10, 15, 20, 0];
+const SNOOZE_DISPLAY_OPTIONS: SnoozeDuration[] = [5, 10, 15, 30];
 
 interface SnoozePickerProps {
   value: SnoozeDuration;
@@ -11,11 +11,6 @@ interface SnoozePickerProps {
 }
 
 export function SnoozePicker({ value, onValueChange }: SnoozePickerProps) {
-  const formatLabel = (duration: SnoozeDuration) => {
-    if (duration === 0) return 'No snooze';
-    return `${duration} min`;
-  };
-
   return (
     <View style={styles.container}>
       {SNOOZE_DISPLAY_OPTIONS.map((duration) => (
@@ -34,7 +29,7 @@ export function SnoozePicker({ value, onValueChange }: SnoozePickerProps) {
               value === duration && styles.optionTextSelected,
             ]}
           >
-            {formatLabel(duration)}
+            {`${duration} min`}
           </Text>
         </TouchableOpacity>
       ))}
@@ -45,21 +40,24 @@ export function SnoozePicker({ value, onValueChange }: SnoozePickerProps) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   option: {
-    paddingVertical: spacing.sm,
+    height: 32,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.full,
     backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   optionSelected: {
     backgroundColor: colors.accent,
   },
   optionText: {
-    ...typography.label,
+    fontFamily: fontFamily.medium,
+    fontSize: 12,
     color: colors.textSecondary,
+    textAlign: 'center',
   },
   optionTextSelected: {
     color: colors.white,

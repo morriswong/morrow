@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.full,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     gap: spacing.sm,
@@ -51,7 +51,9 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     ...typography.body,
+    lineHeight: undefined,
     color: colors.textPrimary,
     padding: 0,
+    margin: 0,
   },
 });

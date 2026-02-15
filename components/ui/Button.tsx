@@ -43,7 +43,7 @@ export function Button({
   ];
 
   const textStyles = [
-    styles.text,
+    styles.baseText,
     styles[`${variant}Text` as keyof typeof styles],
     disabled && styles.disabledText,
     textStyle,
@@ -76,16 +76,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    borderRadius: borderRadius.full,
     gap: spacing.sm,
   },
   fullWidth: {
     width: '100%',
   },
   primary: {
-    backgroundColor: colors.accent,
+    backgroundColor: 'rgba(81, 30, 227, 0.8)',
   },
   secondary: {
     backgroundColor: colors.surface,
@@ -112,15 +111,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dangerLight,
     borderWidth: 1,
     borderColor: colors.dangerPrimary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
   },
   disabled: {
     backgroundColor: colors.disabled,
     opacity: 0.6,
   },
+  // Base text style
+  baseText: {
+    textAlign: 'center',
+  },
   // Text styles
   primaryText: {
-    ...typography.label,
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 18,
     color: colors.white,
+    textAlign: 'center',
   },
   secondaryText: {
     ...typography.label,
@@ -143,8 +150,10 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   dangerOutlineText: {
-    ...typography.label,
+    fontFamily: 'Outfit-Medium',
+    fontSize: 12,
     color: colors.dangerPrimary,
+    textAlign: 'center',
   },
   disabledText: {
     color: colors.textTertiary,

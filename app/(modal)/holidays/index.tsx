@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,10 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
-import { colors, spacing, borderRadius, typography } from '../../constants';
-import { useDraftAlarmStore } from '../../stores';
-import { TopNav, PageTitle, Entry, Card, SectionTitle } from '../../components/ui';
+import { colors, spacing, borderRadius, typography } from '../../../constants';
+import { useAlarmStore, useDraftAlarmStore } from '../../../stores';
+import { getDefaultHolidayCalendarId } from '../../../utils/helpers';
+import { TopNav, PageTitle, Entry, Card, SectionTitle } from '../../../components/ui';
 
 interface Holiday {
   date: string;
@@ -27,21 +28,30 @@ interface HolidayCalendar {
   flag: string;
 }
 
+// Popular calendars shown at the top of the selection screen
+export const popularCalendarIds = ['uk', 'us'];
+
 export const holidayCalendars: HolidayCalendar[] = [
-  { id: 'us', name: 'US Holidays', country: 'US', flag: '🇺🇸' },
   { id: 'uk', name: 'UK Bank Holidays', country: 'GB', flag: '🇬🇧' },
-  { id: 'ca', name: 'Canada Holidays', country: 'CA', flag: '🇨🇦' },
-  { id: 'au', name: 'Australia Holidays', country: 'AU', flag: '🇦🇺' },
-  { id: 'de', name: 'Germany Holidays', country: 'DE', flag: '🇩🇪' },
-  { id: 'fr', name: 'France Holidays', country: 'FR', flag: '🇫🇷' },
-  { id: 'jp', name: 'Japan Holidays', country: 'JP', flag: '🇯🇵' },
-  { id: 'cn', name: 'China Holidays', country: 'CN', flag: '🇨🇳' },
-  { id: 'in', name: 'India Holidays', country: 'IN', flag: '🇮🇳' },
-  { id: 'br', name: 'Brazil Holidays', country: 'BR', flag: '🇧🇷' },
-  { id: 'mx', name: 'Mexico Holidays', country: 'MX', flag: '🇲🇽' },
-  { id: 'es', name: 'Spain Holidays', country: 'ES', flag: '🇪🇸' },
-  { id: 'it', name: 'Italy Holidays', country: 'IT', flag: '🇮🇹' },
-  { id: 'kr', name: 'South Korea Holidays', country: 'KR', flag: '🇰🇷' },
+  { id: 'us', name: 'US Federal Holidays', country: 'US', flag: '🇺🇲' },
+  { id: 'au', name: 'Australia Public Holidays', country: 'AU', flag: '🇦🇺' },
+  { id: 'br', name: 'Brazil Public Holiday', country: 'BR', flag: '🇧🇷' },
+  { id: 'ca', name: 'Canada Public Holiday', country: 'CA', flag: '🇨🇦' },
+  { id: 'cn', name: 'China Public Holiday', country: 'CN', flag: '🇨🇳' },
+  { id: 'dk', name: 'Denmark Public Holiday', country: 'DK', flag: '🇩🇰' },
+  { id: 'fr', name: 'France Public Holiday', country: 'FR', flag: '🇫🇷' },
+  { id: 'de', name: 'Germany Public Holiday', country: 'DE', flag: '🇩🇪' },
+  { id: 'hk', name: 'Hong Kong Public Holiday', country: 'HK', flag: '🇭🇰' },
+  { id: 'in', name: 'India Public Holidays', country: 'IN', flag: '🇮🇳' },
+  { id: 'it', name: 'Italy Public Holidays', country: 'IT', flag: '🇮🇹' },
+  { id: 'jp', name: 'Japan Public Holidays', country: 'JP', flag: '🇯🇵' },
+  { id: 'kr', name: 'South Korea Public Holidays', country: 'KR', flag: '🇰🇷' },
+  { id: 'lu', name: 'Luxemburg Public Holidays', country: 'LU', flag: '🇱🇺' },
+  { id: 'mt', name: 'Malta Public Holidays', country: 'MT', flag: '🇲🇹' },
+  { id: 'mx', name: 'Mexico Public Holiday', country: 'MX', flag: '🇲🇽' },
+  { id: 'ng', name: 'Nigeria Public Holidays', country: 'NG', flag: '🇳🇬' },
+  { id: 'pk', name: 'Pakistan Public Holidays', country: 'PK', flag: '🇵🇰' },
+  { id: 'es', name: 'Spain Public Holiday', country: 'ES', flag: '🇪🇸' },
 ];
 
 export const holidaysByCalendarAndYear: Record<string, Record<number, Holiday[]>> = {
@@ -621,6 +631,299 @@ export const holidaysByCalendarAndYear: Record<string, Record<number, Holiday[]>
       { date: '2027-12-25', name: 'Christmas' },
     ],
   },
+  dk: {
+    2025: [
+      { date: '2025-01-01', name: 'New Year\'s Day' },
+      { date: '2025-04-17', name: 'Maundy Thursday' },
+      { date: '2025-04-18', name: 'Good Friday' },
+      { date: '2025-04-20', name: 'Easter Sunday' },
+      { date: '2025-04-21', name: 'Easter Monday' },
+      { date: '2025-05-16', name: 'General Prayer Day' },
+      { date: '2025-05-29', name: 'Ascension Day' },
+      { date: '2025-06-05', name: 'Constitution Day' },
+      { date: '2025-06-09', name: 'Whit Monday' },
+      { date: '2025-12-25', name: 'Christmas Day' },
+    ],
+    2026: [
+      { date: '2026-01-01', name: 'New Year\'s Day' },
+      { date: '2026-04-02', name: 'Maundy Thursday' },
+      { date: '2026-04-03', name: 'Good Friday' },
+      { date: '2026-04-05', name: 'Easter Sunday' },
+      { date: '2026-04-06', name: 'Easter Monday' },
+      { date: '2026-05-01', name: 'General Prayer Day' },
+      { date: '2026-05-14', name: 'Ascension Day' },
+      { date: '2026-05-25', name: 'Whit Monday' },
+      { date: '2026-06-05', name: 'Constitution Day' },
+      { date: '2026-12-25', name: 'Christmas Day' },
+    ],
+    2027: [
+      { date: '2027-01-01', name: 'New Year\'s Day' },
+      { date: '2027-03-25', name: 'Maundy Thursday' },
+      { date: '2027-03-26', name: 'Good Friday' },
+      { date: '2027-03-28', name: 'Easter Sunday' },
+      { date: '2027-03-29', name: 'Easter Monday' },
+      { date: '2027-04-23', name: 'General Prayer Day' },
+      { date: '2027-05-06', name: 'Ascension Day' },
+      { date: '2027-05-17', name: 'Whit Monday' },
+      { date: '2027-06-05', name: 'Constitution Day' },
+      { date: '2027-12-25', name: 'Christmas Day' },
+    ],
+  },
+  hk: {
+    2025: [
+      { date: '2025-01-01', name: 'New Year\'s Day' },
+      { date: '2025-01-29', name: 'Lunar New Year\'s Day' },
+      { date: '2025-01-30', name: 'Second day of Lunar New Year' },
+      { date: '2025-01-31', name: 'Third day of Lunar New Year' },
+      { date: '2025-04-04', name: 'Ching Ming Festival' },
+      { date: '2025-04-18', name: 'Good Friday' },
+      { date: '2025-04-19', name: 'Day after Good Friday' },
+      { date: '2025-04-21', name: 'Easter Monday' },
+      { date: '2025-05-01', name: 'Labour Day' },
+      { date: '2025-05-05', name: 'Buddha\'s Birthday' },
+      { date: '2025-06-02', name: 'Tuen Ng Festival' },
+      { date: '2025-07-01', name: 'HKSAR Establishment Day' },
+      { date: '2025-10-01', name: 'National Day' },
+      { date: '2025-10-07', name: 'Day after Mid-Autumn Festival' },
+      { date: '2025-10-29', name: 'Chung Yeung Festival' },
+      { date: '2025-12-25', name: 'Christmas Day' },
+      { date: '2025-12-26', name: 'Day after Christmas' },
+      { date: '2025-08-15', name: 'Day after Independence Day' },
+    ],
+    2026: [
+      { date: '2026-01-01', name: 'New Year\'s Day' },
+      { date: '2026-02-17', name: 'Lunar New Year\'s Day' },
+      { date: '2026-02-18', name: 'Second day of Lunar New Year' },
+      { date: '2026-02-19', name: 'Third day of Lunar New Year' },
+      { date: '2026-04-03', name: 'Good Friday' },
+      { date: '2026-04-04', name: 'Day after Good Friday' },
+      { date: '2026-04-05', name: 'Ching Ming Festival' },
+      { date: '2026-04-06', name: 'Easter Monday' },
+      { date: '2026-05-01', name: 'Labour Day' },
+      { date: '2026-05-24', name: 'Buddha\'s Birthday' },
+      { date: '2026-06-19', name: 'Tuen Ng Festival' },
+      { date: '2026-07-01', name: 'HKSAR Establishment Day' },
+      { date: '2026-09-26', name: 'Day after Mid-Autumn Festival' },
+      { date: '2026-10-01', name: 'National Day' },
+      { date: '2026-10-18', name: 'Chung Yeung Festival' },
+      { date: '2026-12-25', name: 'Christmas Day' },
+      { date: '2026-12-26', name: 'Day after Christmas' },
+    ],
+    2027: [
+      { date: '2027-01-01', name: 'New Year\'s Day' },
+      { date: '2027-02-06', name: 'Lunar New Year\'s Day' },
+      { date: '2027-02-07', name: 'Second day of Lunar New Year' },
+      { date: '2027-02-08', name: 'Third day of Lunar New Year' },
+      { date: '2027-03-26', name: 'Good Friday' },
+      { date: '2027-03-27', name: 'Day after Good Friday' },
+      { date: '2027-03-29', name: 'Easter Monday' },
+      { date: '2027-04-05', name: 'Ching Ming Festival' },
+      { date: '2027-05-01', name: 'Labour Day' },
+      { date: '2027-05-13', name: 'Buddha\'s Birthday' },
+      { date: '2027-06-09', name: 'Tuen Ng Festival' },
+      { date: '2027-07-01', name: 'HKSAR Establishment Day' },
+      { date: '2027-09-16', name: 'Day after Mid-Autumn Festival' },
+      { date: '2027-10-01', name: 'National Day' },
+      { date: '2027-10-08', name: 'Chung Yeung Festival' },
+      { date: '2027-12-25', name: 'Christmas Day' },
+      { date: '2027-12-26', name: 'Day after Christmas' },
+      { date: '2027-12-27', name: 'Additional Holiday' },
+    ],
+  },
+  lu: {
+    2025: [
+      { date: '2025-01-01', name: 'New Year\'s Day' },
+      { date: '2025-04-21', name: 'Easter Monday' },
+      { date: '2025-05-01', name: 'Labour Day' },
+      { date: '2025-05-09', name: 'Europe Day' },
+      { date: '2025-05-29', name: 'Ascension Day' },
+      { date: '2025-06-09', name: 'Whit Monday' },
+      { date: '2025-06-23', name: 'National Day' },
+      { date: '2025-08-15', name: 'Assumption Day' },
+      { date: '2025-11-01', name: 'All Saints\' Day' },
+      { date: '2025-12-25', name: 'Christmas Day' },
+      { date: '2025-12-26', name: 'St. Stephen\'s Day' },
+    ],
+    2026: [
+      { date: '2026-01-01', name: 'New Year\'s Day' },
+      { date: '2026-04-06', name: 'Easter Monday' },
+      { date: '2026-05-01', name: 'Labour Day' },
+      { date: '2026-05-09', name: 'Europe Day' },
+      { date: '2026-05-14', name: 'Ascension Day' },
+      { date: '2026-05-25', name: 'Whit Monday' },
+      { date: '2026-06-23', name: 'National Day' },
+      { date: '2026-08-15', name: 'Assumption Day' },
+      { date: '2026-11-01', name: 'All Saints\' Day' },
+      { date: '2026-12-25', name: 'Christmas Day' },
+      { date: '2026-12-26', name: 'St. Stephen\'s Day' },
+    ],
+    2027: [
+      { date: '2027-01-01', name: 'New Year\'s Day' },
+      { date: '2027-03-29', name: 'Easter Monday' },
+      { date: '2027-05-01', name: 'Labour Day' },
+      { date: '2027-05-06', name: 'Ascension Day' },
+      { date: '2027-05-09', name: 'Europe Day' },
+      { date: '2027-05-17', name: 'Whit Monday' },
+      { date: '2027-06-23', name: 'National Day' },
+      { date: '2027-08-15', name: 'Assumption Day' },
+      { date: '2027-11-01', name: 'All Saints\' Day' },
+      { date: '2027-12-25', name: 'Christmas Day' },
+      { date: '2027-12-26', name: 'St. Stephen\'s Day' },
+    ],
+  },
+  mt: {
+    2025: [
+      { date: '2025-01-01', name: 'New Year\'s Day' },
+      { date: '2025-02-10', name: 'Feast of St. Paul\'s Shipwreck' },
+      { date: '2025-03-19', name: 'Feast of St. Joseph' },
+      { date: '2025-03-31', name: 'Freedom Day' },
+      { date: '2025-04-18', name: 'Good Friday' },
+      { date: '2025-05-01', name: 'Worker\'s Day' },
+      { date: '2025-06-07', name: 'Sette Giugno' },
+      { date: '2025-06-29', name: 'Feast of St. Peter and St. Paul' },
+      { date: '2025-08-15', name: 'Feast of the Assumption' },
+      { date: '2025-09-08', name: 'Victory Day' },
+      { date: '2025-09-21', name: 'Independence Day' },
+      { date: '2025-12-08', name: 'Feast of the Immaculate Conception' },
+      { date: '2025-12-13', name: 'Republic Day' },
+      { date: '2025-12-25', name: 'Christmas Day' },
+    ],
+    2026: [
+      { date: '2026-01-01', name: 'New Year\'s Day' },
+      { date: '2026-02-10', name: 'Feast of St. Paul\'s Shipwreck' },
+      { date: '2026-03-19', name: 'Feast of St. Joseph' },
+      { date: '2026-03-31', name: 'Freedom Day' },
+      { date: '2026-04-03', name: 'Good Friday' },
+      { date: '2026-05-01', name: 'Worker\'s Day' },
+      { date: '2026-06-07', name: 'Sette Giugno' },
+      { date: '2026-06-29', name: 'Feast of St. Peter and St. Paul' },
+      { date: '2026-08-15', name: 'Feast of the Assumption' },
+      { date: '2026-09-08', name: 'Victory Day' },
+      { date: '2026-09-21', name: 'Independence Day' },
+      { date: '2026-12-08', name: 'Feast of the Immaculate Conception' },
+      { date: '2026-12-13', name: 'Republic Day' },
+      { date: '2026-12-25', name: 'Christmas Day' },
+    ],
+    2027: [
+      { date: '2027-01-01', name: 'New Year\'s Day' },
+      { date: '2027-02-10', name: 'Feast of St. Paul\'s Shipwreck' },
+      { date: '2027-03-19', name: 'Feast of St. Joseph' },
+      { date: '2027-03-26', name: 'Good Friday' },
+      { date: '2027-03-31', name: 'Freedom Day' },
+      { date: '2027-05-01', name: 'Worker\'s Day' },
+      { date: '2027-06-07', name: 'Sette Giugno' },
+      { date: '2027-06-29', name: 'Feast of St. Peter and St. Paul' },
+      { date: '2027-08-15', name: 'Feast of the Assumption' },
+      { date: '2027-09-08', name: 'Victory Day' },
+      { date: '2027-09-21', name: 'Independence Day' },
+      { date: '2027-12-08', name: 'Feast of the Immaculate Conception' },
+      { date: '2027-12-13', name: 'Republic Day' },
+      { date: '2027-12-25', name: 'Christmas Day' },
+    ],
+  },
+  ng: {
+    2025: [
+      { date: '2025-01-01', name: 'New Year\'s Day' },
+      { date: '2025-03-31', name: 'Eid al-Fitr' },
+      { date: '2025-04-01', name: 'Eid al-Fitr Holiday' },
+      { date: '2025-04-18', name: 'Good Friday' },
+      { date: '2025-04-21', name: 'Easter Monday' },
+      { date: '2025-05-01', name: 'Workers\' Day' },
+      { date: '2025-05-27', name: 'Children\'s Day' },
+      { date: '2025-06-07', name: 'Eid al-Adha' },
+      { date: '2025-06-08', name: 'Eid al-Adha Holiday' },
+      { date: '2025-06-12', name: 'Democracy Day' },
+      { date: '2025-10-01', name: 'Independence Day' },
+      { date: '2025-10-06', name: 'Mawlid' },
+      { date: '2025-12-25', name: 'Christmas Day' },
+    ],
+    2026: [
+      { date: '2026-01-01', name: 'New Year\'s Day' },
+      { date: '2026-03-20', name: 'Eid al-Fitr' },
+      { date: '2026-03-21', name: 'Eid al-Fitr Holiday' },
+      { date: '2026-04-03', name: 'Good Friday' },
+      { date: '2026-04-06', name: 'Easter Monday' },
+      { date: '2026-05-01', name: 'Workers\' Day' },
+      { date: '2026-05-27', name: 'Children\'s Day' },
+      { date: '2026-05-27', name: 'Eid al-Adha' },
+      { date: '2026-06-12', name: 'Democracy Day' },
+      { date: '2026-09-25', name: 'Mawlid' },
+      { date: '2026-10-01', name: 'Independence Day' },
+      { date: '2026-12-25', name: 'Christmas Day' },
+      { date: '2026-12-26', name: 'Boxing Day' },
+    ],
+    2027: [
+      { date: '2027-01-01', name: 'New Year\'s Day' },
+      { date: '2027-03-10', name: 'Eid al-Fitr' },
+      { date: '2027-03-11', name: 'Eid al-Fitr Holiday' },
+      { date: '2027-03-26', name: 'Good Friday' },
+      { date: '2027-03-29', name: 'Easter Monday' },
+      { date: '2027-05-01', name: 'Workers\' Day' },
+      { date: '2027-05-17', name: 'Eid al-Adha' },
+      { date: '2027-05-27', name: 'Children\'s Day' },
+      { date: '2027-06-12', name: 'Democracy Day' },
+      { date: '2027-09-16', name: 'Mawlid' },
+      { date: '2027-10-01', name: 'Independence Day' },
+      { date: '2027-12-25', name: 'Christmas Day' },
+      { date: '2027-12-26', name: 'Boxing Day' },
+    ],
+  },
+  pk: {
+    2025: [
+      { date: '2025-02-05', name: 'Kashmir Day' },
+      { date: '2025-03-23', name: 'Pakistan Day' },
+      { date: '2025-03-31', name: 'Eid al-Fitr' },
+      { date: '2025-04-01', name: 'Eid al-Fitr' },
+      { date: '2025-04-02', name: 'Eid al-Fitr' },
+      { date: '2025-05-01', name: 'Labour Day' },
+      { date: '2025-06-07', name: 'Eid al-Adha' },
+      { date: '2025-06-08', name: 'Eid al-Adha' },
+      { date: '2025-06-09', name: 'Eid al-Adha' },
+      { date: '2025-06-27', name: 'Shab-e-Meraj' },
+      { date: '2025-07-06', name: 'Muharram' },
+      { date: '2025-08-14', name: 'Independence Day' },
+      { date: '2025-09-05', name: 'Eid Milad-un-Nabi' },
+      { date: '2025-11-09', name: 'Iqbal Day' },
+      { date: '2025-12-25', name: 'Quaid-e-Azam Day' },
+      { date: '2025-12-31', name: 'Bank Holiday' },
+    ],
+    2026: [
+      { date: '2026-02-05', name: 'Kashmir Day' },
+      { date: '2026-03-20', name: 'Eid al-Fitr' },
+      { date: '2026-03-21', name: 'Eid al-Fitr' },
+      { date: '2026-03-22', name: 'Eid al-Fitr' },
+      { date: '2026-03-23', name: 'Pakistan Day' },
+      { date: '2026-05-01', name: 'Labour Day' },
+      { date: '2026-05-27', name: 'Eid al-Adha' },
+      { date: '2026-05-28', name: 'Eid al-Adha' },
+      { date: '2026-05-29', name: 'Eid al-Adha' },
+      { date: '2026-06-16', name: 'Shab-e-Meraj' },
+      { date: '2026-06-25', name: 'Muharram' },
+      { date: '2026-08-14', name: 'Independence Day' },
+      { date: '2026-08-25', name: 'Eid Milad-un-Nabi' },
+      { date: '2026-11-09', name: 'Iqbal Day' },
+      { date: '2026-12-25', name: 'Quaid-e-Azam Day' },
+      { date: '2026-12-31', name: 'Bank Holiday' },
+    ],
+    2027: [
+      { date: '2027-02-05', name: 'Kashmir Day' },
+      { date: '2027-03-10', name: 'Eid al-Fitr' },
+      { date: '2027-03-11', name: 'Eid al-Fitr' },
+      { date: '2027-03-12', name: 'Eid al-Fitr' },
+      { date: '2027-03-23', name: 'Pakistan Day' },
+      { date: '2027-05-01', name: 'Labour Day' },
+      { date: '2027-05-17', name: 'Eid al-Adha' },
+      { date: '2027-05-18', name: 'Eid al-Adha' },
+      { date: '2027-05-19', name: 'Eid al-Adha' },
+      { date: '2027-06-06', name: 'Shab-e-Meraj' },
+      { date: '2027-06-16', name: 'Muharram' },
+      { date: '2027-08-14', name: 'Independence Day' },
+      { date: '2027-08-16', name: 'Eid Milad-un-Nabi' },
+      { date: '2027-11-09', name: 'Iqbal Day' },
+      { date: '2027-12-25', name: 'Quaid-e-Azam Day' },
+      { date: '2027-12-31', name: 'Bank Holiday' },
+    ],
+  },
 };
 
 // Helper function to get holiday count for a calendar
@@ -637,9 +940,17 @@ export function getHolidayCount(calendarId: string): number {
 
 export default function SkipHolidaysScreen() {
   const router = useRouter();
-  const { draft } = useDraftAlarmStore();
+  const { alarms } = useAlarmStore();
+  const { draft, updateDraft } = useDraftAlarmStore();
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
+
+  // Pre-fill calendar if none selected when entering this screen
+  useEffect(() => {
+    if (draft && !draft.holidayCalendarId) {
+      updateDraft({ holidayCalendarId: getDefaultHolidayCalendarId(alarms) });
+    }
+  }, []);
 
   if (!draft) {
     router.back();

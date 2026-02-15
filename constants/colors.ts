@@ -32,6 +32,11 @@ export const colors = {
   // Accent variants
   accentBrandTranslucent: 'rgba(81, 30, 227, 0.5)',
   accentBrandDark: '#361673',
+  accentBrandLight: '#BE9CFF',
+
+  // Ring screen
+  wakeButtonBg: 'rgba(190, 156, 255, 0.2)',
+  snoozeButtonBg: 'rgba(81, 30, 227, 0.8)',
 
   // Danger colors
   dangerPrimary: '#AD1C19',

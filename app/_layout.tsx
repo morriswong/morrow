@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet } from 'react-native';
@@ -12,8 +12,9 @@ import {
 } from '@expo-google-fonts/outfit';
 import * as SplashScreen from 'expo-splash-screen';
 import { colors } from '../constants';
+import SplashOverlay from '../components/SplashOverlay';
 
-// Keep the splash screen visible while we fetch resources
+// Keep the native splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -24,11 +25,18 @@ export default function RootLayout() {
     'Outfit-Bold': Outfit_700Bold,
   });
 
+  const [showSplash, setShowSplash] = useState(true);
+
   useEffect(() => {
     if (fontsLoaded) {
+      // Hide the native splash to reveal our custom animated one
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
+
+  const handleSplashFinish = useCallback(() => {
+    setShowSplash(false);
+  }, []);
 
   if (!fontsLoaded) {
     return null;
@@ -45,13 +53,29 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="index" />
-        <Stack.Screen name="alarm/new" />
-        <Stack.Screen name="alarm/[id]" />
-        <Stack.Screen name="sound/index" />
-        <Stack.Screen name="sound/language" />
-        <Stack.Screen name="holidays/index" />
-        <Stack.Screen name="holidays/calendar" />
+        <Stack.Screen
+          name="ring"
+          options={{
+            animation: 'fade',
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen
+          name="wakeup"
+          options={{
+            animation: 'fade',
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen
+          name="(modal)"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
       </Stack>
+      {showSplash && <SplashOverlay onFinish={handleSplashFinish} />}
     </GestureHandlerRootView>
   );
 }

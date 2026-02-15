@@ -6,32 +6,66 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  TouchableOpacity,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography } from '../../constants';
-import { useAlarmStore, useDraftAlarmStore } from '../../stores';
-import { createDefaultAlarm } from '../../utils';
-import { TopNav, Button, Card, Entry, DayPicker, Slider, PageTitle } from '../../components/ui';
-import { TimePicker, SnoozePicker } from '../../components/alarm';
-import { SnoozeDuration } from '../../types';
+import { Ionicons, Feather } from '@expo/vector-icons';
+import { colors, spacing, borderRadius, typography } from '../../../constants';
+import { useAlarmStore, useDraftAlarmStore } from '../../../stores';
+import { TopNav, Button, Card, Entry, DayPicker, Slider, PageTitle } from '../../../components/ui';
+import { TimePicker, SnoozePicker } from '../../../components/alarm';
+import { SnoozeDuration } from '../../../types';
+import { getDefaultHolidayCalendarId } from '../../../utils/helpers';
+import { holidayCalendars, getHolidayCount } from '../holidays';
 
-export default function NewAlarmScreen() {
+export default function EditAlarmScreen() {
   const router = useRouter();
-  const { addAlarm } = useAlarmStore();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { alarms, getAlarm, updateAlarm, deleteAlarm } = useAlarmStore();
   const { draft, setDraft, updateDraft, clearDraft } = useDraftAlarmStore();
 
   useEffect(() => {
-    setDraft(createDefaultAlarm());
+    const alarm = getAlarm(id);
+    if (alarm) {
+      setDraft({ ...alarm });
+    } else {
+      router.back();
+    }
     return () => clearDraft();
-  }, []);
+  }, [id]);
+
+  // Auto-fill holiday calendar whenever skipHolidays is turned on
+  useEffect(() => {
+    if (draft?.skipHolidays && !draft.holidayCalendarId) {
+      updateDraft({ holidayCalendarId: getDefaultHolidayCalendarId(alarms) });
+    }
+  }, [draft?.skipHolidays]);
 
   if (!draft) return null;
 
   const handleSave = () => {
-    addAlarm(draft);
+    updateAlarm(id, draft);
     router.back();
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Alarm',
+      'Are you sure you want to delete this alarm?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            deleteAlarm(id);
+            router.back();
+          },
+        },
+      ]
+    );
   };
 
   const handleTimeChange = (hour: number, minute: number, isAM: boolean) => {
@@ -93,25 +127,18 @@ export default function NewAlarmScreen() {
             />
           </View>
 
-          {/* When Section - Day Picker */}
-          <View style={styles.sectionTitleContainer}>
+          {/* When Section */}
+          <View style={styles.whenSection}>
             <Text style={styles.sectionTitle}>When</Text>
-          </View>
-          <View style={styles.dayPickerContainer}>
             <DayPicker
               selectedDays={draft.repeatDays}
               onDaysChange={handleDaysChange}
             />
-          </View>
-
-          {/* Skip Holidays Card */}
-          <View style={styles.cardContainer}>
             <Card style={styles.combinedCard}>
               <Entry
                 variant="toggle"
                 label="Skip holidays"
-                sublabel={draft.skipHolidays ? 'Will skip public holidays' : undefined}
-                icon={<Ionicons name="calendar-outline" size={20} color={colors.white} />}
+                icon={<Ionicons name="moon-outline" size={20} color={colors.accentBrandLight} />}
                 iconBackgroundColor={colors.accentBrandDark}
                 value={draft.skipHolidays}
                 onValueChange={handleSkipHolidaysToggle}
@@ -119,14 +146,30 @@ export default function NewAlarmScreen() {
                 noBorderRadius
               />
               {draft.skipHolidays && (
-                <Entry
-                  variant="selection"
-                  label="Holiday calendar"
-                  value={draft.holidayCalendarId ? 'US Holidays' : 'Select'}
-                  onPress={() => router.push('/holidays')}
-                  noBackground
-                  noBorderRadius
-                />
+                <View style={styles.holidaySelectorContainer}>
+                  <TouchableOpacity
+                    style={styles.holidaySelector}
+                    onPress={() => router.push('/holidays')}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.holidaySelectorText}>
+                      {draft.holidayCalendarId ? (
+                        <>
+                          <Text style={styles.holidayCalendarName}>
+                            {holidayCalendars.find(c => c.id === draft.holidayCalendarId)?.name ?? 'Select calendar'}
+                          </Text>
+                          <Text style={styles.holidayDot}> {'\u2022'} </Text>
+                          <Text style={styles.holidayCount}>
+                            {getHolidayCount(draft.holidayCalendarId)} holidays
+                          </Text>
+                        </>
+                      ) : (
+                        <Text style={styles.holidayCalendarName}>Select calendar</Text>
+                      )}
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.accent} />
+                  </TouchableOpacity>
+                </View>
               )}
             </Card>
           </View>
@@ -137,8 +180,8 @@ export default function NewAlarmScreen() {
               <Entry
                 variant="selection"
                 label="Sound"
-                sublabel={`${draft.soundSettings.voiceStyle === 'female' ? 'Female' : 'Male'} voice`}
-                icon={<Ionicons name="musical-notes-outline" size={20} color={colors.white} />}
+                sublabel={`${draft.soundSettings.language} \u00B7 ${draft.soundSettings.voiceStyle === 'female' ? 'Female' : 'Male'}, ${draft.soundSettings.voicePersonality.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}`}
+                icon={<Ionicons name="musical-notes-outline" size={20} color={colors.accentBrandLight} />}
                 iconBackgroundColor={colors.accentBrandDark}
                 onPress={() => router.push('/sound')}
                 noBackground
@@ -161,7 +204,7 @@ export default function NewAlarmScreen() {
             <Card style={styles.snoozeCard}>
               <View style={styles.snoozeHeader}>
                 <View style={styles.snoozeIconContainer}>
-                  <Ionicons name="alarm-outline" size={20} color={colors.white} />
+                  <Feather name="meh" size={20} color={colors.accentBrandLight} />
                 </View>
                 <Text style={styles.snoozeLabel}>Snooze duration</Text>
               </View>
@@ -172,13 +215,12 @@ export default function NewAlarmScreen() {
             </Card>
           </View>
 
-          {/* Delete Button Placeholder (only show in edit mode) */}
+          {/* Delete Button */}
           <View style={styles.deleteButtonContainer}>
             <Button
               title="Delete alarm"
               variant="dangerOutline"
-              onPress={() => router.back()}
-              fullWidth
+              onPress={handleDelete}
             />
           </View>
         </ScrollView>
@@ -207,27 +249,19 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 100,
+    paddingHorizontal: spacing.lg,
+    gap: spacing['3xl'],
   },
   timePickerContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
   },
-  sectionTitleContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.sm,
+  whenSection: {
+    gap: spacing.lg,
   },
   sectionTitle: {
     ...typography.body,
     color: colors.textSecondary,
   },
-  dayPickerContainer: {
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
-  },
   cardContainer: {
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
   },
   combinedCard: {
     padding: 0,
@@ -259,10 +293,37 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textPrimary,
   },
+  holidaySelectorContainer: {
+    paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
+  holidaySelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  holidaySelectorText: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  holidayCalendarName: {
+    ...typography.bodySmall,
+    color: colors.textPrimary,
+  },
+  holidayDot: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+  },
+  holidayCount: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+  },
   deleteButtonContainer: {
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
+    alignItems: 'center',
   },
   saveButtonContainer: {
     position: 'absolute',

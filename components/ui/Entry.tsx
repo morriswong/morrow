@@ -60,13 +60,13 @@ export function Entry(props: EntryProps) {
       return (
         <View style={styles.selectionRight}>
           {value && <Text style={styles.selectionValue}>{value}</Text>}
-          <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+          <Ionicons name="chevron-forward" size={20} color={colors.accent} />
         </View>
       );
     }
 
     if (onPress) {
-      return <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />;
+      return <Ionicons name="chevron-forward" size={20} color={colors.accent} />;
     }
 
     return null;

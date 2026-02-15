@@ -13,7 +13,7 @@ import { colors, spacing, borderRadius, typography } from '../constants';
 import { useAlarmStore } from '../stores';
 import { AlarmCard, AlarmListItem } from '../components/alarm';
 import { SectionTitle } from '../components/ui';
-import { formatTimeUntilAlarm, getNextEnabledAlarm, sortAlarmsByTimeAndDay } from '../utils';
+import { formatTimeUntilAlarm, getNextEnabledAlarm, sortAlarmsByTimeAndDay, getGreeting } from '../utils';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -48,9 +48,13 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header - Single personalized greeting */}
-        <View style={styles.header}>
-          <Text style={styles.greeting}>Sleep tight, Morris 💙</Text>
-        </View>
+        <TouchableOpacity
+          style={styles.header}
+          onLongPress={() => router.push({ pathname: '/ring', params: { id: 'seed-work' } })}
+          activeOpacity={1}
+        >
+          <Text style={styles.greeting}>{getGreeting()}</Text>
+        </TouchableOpacity>
 
         {/* Featured Alarm Card */}
         {nextAlarm && (

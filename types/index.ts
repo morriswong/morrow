@@ -1,5 +1,8 @@
+export type VoicePersonality = 'friendly-coach' | 'sweet-lover' | 'loyal-servant' | 'condescending-boss';
+
 export interface SoundSettings {
   voiceStyle: 'female' | 'male';
+  voicePersonality: VoicePersonality;
   language: string;
   languageCode: string;
 }
