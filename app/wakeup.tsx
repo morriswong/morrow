@@ -40,20 +40,16 @@ export default function WakeUpScreen() {
       />
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.centerContent}>
+          <View style={styles.fireCircle}>
+            <Text style={styles.fireEmoji}>
+              {didSnooze ? '\uD83D\uDE09' : '\uD83D\uDD25'}
+            </Text>
+          </View>
           <Text style={styles.greeting}>
             {didSnooze
-              ? "It's never too late to start!"
-              : 'Have a nice day!'}
+              ? "It's never too late!"
+              : 'Have a nice day, Morris!'}
           </Text>
-
-          <View style={styles.todayContainer}>
-            <View style={styles.fireCircle}>
-              <Text style={styles.fireEmoji}>
-                {didSnooze ? '\uD83D\uDE09' : '\uD83D\uDD25'}
-              </Text>
-            </View>
-            <Text style={styles.todayLabel}>Today</Text>
-          </View>
         </View>
       </SafeAreaView>
     </View>
@@ -82,10 +78,6 @@ const styles = StyleSheet.create({
     color: colors.white,
     textAlign: 'center',
   },
-  todayContainer: {
-    alignItems: 'center',
-    gap: 10,
-  },
   fireCircle: {
     width: CIRCLE_SIZE,
     height: CIRCLE_SIZE,
@@ -100,10 +92,5 @@ const styles = StyleSheet.create({
     fontSize: 56,
     textAlign: 'center',
     letterSpacing: 3.36,
-  },
-  todayLabel: {
-    fontFamily: 'Outfit-Regular',
-    fontSize: 13,
-    color: colors.textPrimary,
   },
 });

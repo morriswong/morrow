@@ -1,66 +1,51 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, spacing, borderRadius } from '../../constants';
-import { DAYS_OF_WEEK } from '../../types';
 
 interface NoSnoozeStreakProps {
-  /** Day indices (0=Mon..6=Sun) where the user woke without snoozing */
-  streakDays?: number[];
+  /**
+   * Array of past ring results for this alarm (most recent last).
+   * true = woke without snoozing (🔥), false = snoozed (🫥).
+   * Only the most recent 4 are shown, plus the current "Now" circle.
+   * If empty or undefined, only the "Now" circle is displayed (first ring).
+   */
+  pastResults?: boolean[];
 }
 
-export function NoSnoozeStreak({ streakDays }: NoSnoozeStreakProps) {
-  // Today as Mon=0..Sun=6
-  const todayIndex = (new Date().getDay() + 6) % 7;
-
-  // Default: all past days this week are streak days (simulates perfect week)
-  const streak = streakDays ?? Array.from({ length: todayIndex }, (_, i) => i);
+export function NoSnoozeStreak({ pastResults = [] }: NoSnoozeStreakProps) {
+  // Show at most the 4 most recent past results
+  const recentPast = pastResults.slice(-4);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>No-snooze days of the week</Text>
+      <Text style={styles.title}>No-snooze streak</Text>
       <View style={styles.daysRow}>
-        {DAYS_OF_WEEK.map((day, index) => {
-          const isToday = index === todayIndex;
-          const isPast = index < todayIndex;
-          const hasStreak = isPast && streak.includes(index);
-
-          if (isToday) {
-            return (
-              <View key={index} style={styles.todayWrapper}>
-                <View style={[styles.dayCircle, styles.todayCircle]}>
-                  <Text style={[styles.fireEmoji, styles.todayEmoji]}>
-                    {'\uD83D\uDD25'}
-                  </Text>
-                </View>
-                <Text style={styles.todayLabel}>Today</Text>
-              </View>
-            );
-          }
-
-          if (hasStreak) {
+        {recentPast.map((hit, index) => {
+          if (hit) {
             return (
               <View key={index} style={[styles.dayCircle, styles.streakCircle]}>
-                <Text style={styles.fireEmoji}>{'\uD83D\uDD25'}</Text>
+                <Text style={styles.emoji}>{'\uD83D\uDD25'}</Text>
               </View>
             );
           }
 
-          if (isPast) {
-            // Past day without streak (snoozed)
-            return (
-              <View key={index} style={[styles.dayCircle, styles.missedCircle]}>
-                <Text style={styles.dayLetter}>{day}</Text>
-              </View>
-            );
-          }
-
-          // Future day
+          // Missed (snoozed)
           return (
-            <View key={index} style={[styles.dayCircle, styles.futureCircle]}>
-              <Text style={styles.dayLetter}>{day}</Text>
+            <View key={index} style={[styles.dayCircle, styles.missedCircle]}>
+              <Text style={styles.emoji}>{'\uD83E\uDEE5'}</Text>
             </View>
           );
         })}
+
+        {/* Current alarm — "Now" */}
+        <View style={styles.nowWrapper}>
+          <View style={[styles.dayCircle, styles.nowCircle]}>
+            <Text style={[styles.emoji, styles.nowEmoji]}>
+              {'\uD83D\uDD25'}
+            </Text>
+          </View>
+          <Text style={styles.nowLabel}>Now</Text>
+        </View>
       </View>
     </View>
   );
@@ -69,11 +54,13 @@ export function NoSnoozeStreak({ streakDays }: NoSnoozeStreakProps) {
 const styles = StyleSheet.create({
   container: {
     gap: 14,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing['5xl'],
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
   },
   title: {
     fontFamily: 'Outfit-Regular',
-    fontSize: 13,
+    fontSize: 16,
     color: colors.textPrimary,
     textAlign: 'center',
   },
@@ -95,37 +82,29 @@ const styles = StyleSheet.create({
   missedCircle: {
     backgroundColor: colors.accentBrandDark,
   },
-  todayWrapper: {
+  nowWrapper: {
     flex: 1,
     alignItems: 'center',
     gap: 10,
   },
-  todayCircle: {
+  nowCircle: {
     flex: 0,
     alignSelf: 'stretch',
     backgroundColor: colors.accentBrandDark,
     borderWidth: 2,
     borderColor: colors.accent,
   },
-  todayEmoji: {
+  nowEmoji: {
     opacity: 0.5,
   },
-  todayLabel: {
+  nowLabel: {
     fontFamily: 'Outfit-Regular',
     fontSize: 13,
     color: colors.textPrimary,
-  },
-  futureCircle: {
-    backgroundColor: colors.surface,
-  },
-  fireEmoji: {
-    fontSize: 18,
     textAlign: 'center',
   },
-  dayLetter: {
-    fontFamily: 'Outfit-SemiBold',
+  emoji: {
     fontSize: 18,
-    color: colors.textSecondary,
     textAlign: 'center',
   },
 });

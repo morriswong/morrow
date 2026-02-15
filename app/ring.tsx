@@ -43,10 +43,11 @@ export default function RingScreen() {
 
   const alarm = id ? getAlarm(id) : undefined;
   const snoozeDuration = alarm?.snoozeDuration ?? 5;
+  const isRepeatingAlarm = (alarm?.repeatDays?.length ?? 0) > 0;
 
   // Fallback to current time if no alarm found
   const now = new Date();
-  const displayLabel = isSnoozed ? 'Ring again at' : (alarm?.label ?? 'Alarm');
+  const displayLabel = alarm?.label ?? 'Alarm';
   const displayTime = alarm
     ? isSnoozed
       ? addMinutesToTime(alarm.hour, alarm.minute, alarm.isAM, snoozeDuration * snoozeCount)
@@ -83,13 +84,16 @@ export default function RingScreen() {
         {/* Top content area */}
         <View style={styles.topContent}>
           <Text style={styles.alarmLabel}>{displayLabel}</Text>
+          {isSnoozed && (
+            <Text style={styles.snoozedSubtitle}>Alarm will ring again</Text>
+          )}
           <Text style={styles.timeDisplay} adjustsFontSizeToFit numberOfLines={1}>
             {displayTime}
           </Text>
         </View>
 
-        {/* Middle: No-snooze streak (hidden when snoozed) */}
-        {!isSnoozed && (
+        {/* Middle: No-snooze streak (hidden when snoozed or one-time alarm) */}
+        {!isSnoozed && isRepeatingAlarm && (
           <View style={styles.streakContainer}>
             <NoSnoozeStreak />
           </View>
@@ -129,13 +133,20 @@ const styles = StyleSheet.create({
   topContent: {
     alignItems: 'center',
     paddingTop: spacing['3xl'],
+    gap: 14,
   },
   alarmLabel: {
     fontFamily: 'Outfit-Medium',
     fontSize: 20,
     color: colors.white,
     textAlign: 'center',
-    marginBottom: spacing.lg,
+  },
+  snoozedSubtitle: {
+    fontFamily: 'Outfit-Regular',
+    fontSize: 16,
+    color: colors.textTertiary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
   },
   timeDisplay: {
     fontFamily: 'Outfit-Bold',
