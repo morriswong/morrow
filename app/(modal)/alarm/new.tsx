@@ -191,21 +191,12 @@ export default function NewAlarmScreen() {
             </Card>
           </View>
 
-          {/* Delete Button Placeholder (only show in edit mode) */}
-          <View style={styles.deleteButtonContainer}>
-            <Button
-              title="Delete alarm"
-              variant="dangerOutline"
-              onPress={() => router.back()}
-              fullWidth
-            />
-          </View>
         </ScrollView>
 
         {/* Fixed Save Button at Bottom */}
         <View style={styles.saveButtonContainer}>
           <Button
-            title="Save"
+            title="Add alarm"
             variant="accentTranslucent"
             onPress={handleSave}
             fullWidth
@@ -298,9 +289,6 @@ const styles = StyleSheet.create({
   holidayCount: {
     ...typography.bodySmall,
     color: colors.textSecondary,
-  },
-  deleteButtonContainer: {
-    alignItems: 'center',
   },
   saveButtonContainer: {
     position: 'absolute',
