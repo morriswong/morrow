@@ -65,7 +65,7 @@ export function SlideToWake({ onWake }: SlideToWakeProps) {
     <View style={styles.container} onLayout={onLayout}>
       {/* Label text (centered in container) */}
       <Animated.View style={[styles.textContainer, textAnimatedStyle]}>
-        <Text style={styles.label}>Wake up now</Text>
+        <Text style={styles.label}>Stop</Text>
       </Animated.View>
 
       {/* Sliding handle */}
