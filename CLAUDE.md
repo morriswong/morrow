@@ -79,6 +79,70 @@ Alarm scheduling logic: `getNextAlarmTime()`, `formatTimeUntilAlarm()`, `getNext
 
 Separate Astro project with its own `package.json`. Deployed to GitHub Pages via `.github/workflows/deploy-landing.yml`. Has its own `node_modules` — run `npm install` inside `landing/` separately.
 
+## Expo Development Workflow (iOS Simulator)
+
+### Day-to-Day Development
+
+The user runs the Expo dev server in a separate terminal and iterates on the app conversationally. The expected workflow is:
+
+1. User has `npx expo start` running in a terminal (or `npm start`)
+2. User presses `i` to launch the iOS Simulator
+3. Claude makes JS-only changes (components, styles, stores, logic)
+4. **Fast Refresh picks up changes automatically** — no rebuild needed
+5. User sees changes instantly in the simulator
+
+This is the "PowerPoint-like" editing flow — save and see. Most work (UI, styling, navigation, state) is JS-only and should never require a rebuild.
+
+### What Requires a Rebuild (avoid unless necessary)
+
+These changes break the JS-only flow and require `npx expo prebuild --clean && npx expo run:ios`:
+- Modifying `app.json` or `app.config.js`
+- Adding/updating packages with native modules (e.g., `expo-camera`, `expo-notifications`)
+- Changing Expo config plugins
+- Editing files inside `ios/` or `android/` directories
+- Upgrading the Expo SDK version
+
+**Rule of thumb:** If it affects the compiled native binary, rebuild. If it only affects what Metro bundles as JavaScript, Fast Refresh handles it.
+
+### Troubleshooting & Cache Clearing
+
+When the simulator shows errors or stale behavior after a JS change, try these in order:
+
+```bash
+# Level 1: Clear Metro cache and restart (fixes most issues)
+npx expo start --clear
+
+# Level 2: Reset file watcher (when changes aren't detected)
+watchman watch-del-all
+
+# Level 3: Reinstall dependencies (after package changes)
+rm -rf node_modules && npm install && npx expo start --clear
+
+# Level 4: Full nuclear reset (when nothing else works)
+watchman watch-del-all
+rm -rf node_modules $TMPDIR/haste-map-* $TMPDIR/metro-cache
+npm install
+npx expo start --clear
+```
+
+### Common Error Recovery
+
+| Error | Cause | Fix |
+|---|---|---|
+| **Red screen** with stack trace | Runtime error in JS | Fix the code and save; Fast Refresh recovers. If not, press `r` in Metro terminal |
+| **White/blank screen** | Exception during app initialization | Check Metro terminal for errors. Try `npx expo start --clear` |
+| **"Unable to resolve module"** | Stale cache or missing dependency | `npx expo start --clear`, or reinstall node_modules |
+| **"Native module cannot be null"** | Native module not compiled into app | Rebuild: `npx expo prebuild --clean && npx expo run:ios` |
+| **Simulator hangs/crashes** | Corrupted simulator state | Simulator menu → Device → Erase All Content and Settings, then rebuild |
+| **Metro unresponsive** | Zombie process on port 8081 | `lsof -i :8081` to find PID, then `kill -9 <PID>`, restart Metro |
+
+### Important: Claude Code Should Not Blindly Rebuild
+
+When making changes, Claude Code should:
+- **Default to JS-only changes** — edit `.tsx`, `.ts`, style, and store files without touching native config
+- **Never modify `app.json` or add native dependencies** without warning the user that a rebuild will be required
+- **If the user reports a broken screen**, suggest `npx expo start --clear` first before assuming a code bug
+
 ## Key Conventions
 
 - Use `StyleSheet.create()` for all React Native styles (not inline objects)
@@ -87,3 +151,14 @@ Separate Astro project with its own `package.json`. Deployed to GitHub Pages via
 - Animations use `react-native-reanimated` (shared values + animated styles)
 - Icons come from `@expo/vector-icons` (Ionicons and Feather)
 - When adding Zustand store migrations, increment the `version` number and handle all prior versions in `migrate`
+
+## Working with Claude Code
+
+This project is developed iteratively through conversation. The user describes UI or behavior changes and Claude implements them, similar to editing slides in a presentation:
+
+- **Make focused, small changes** — one screen or component at a time so Fast Refresh can show results immediately
+- **Prefer editing existing files** over creating new ones
+- **Always read a file before editing it** to understand current state
+- **After making changes**, tell the user what was changed and what they should see in the simulator
+- **If a change might break the app** (e.g., renaming a route file, changing navigation structure), warn the user before proceeding
+- **When the user reports something looks wrong**, read the relevant file first to understand the current state before suggesting fixes
