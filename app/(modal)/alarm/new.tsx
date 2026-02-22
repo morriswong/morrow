@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,10 +19,12 @@ import { TimePicker, SnoozePicker } from '../../../components/alarm';
 import { SnoozeDuration } from '../../../types';
 import { getDefaultHolidayCalendarId } from '../../../utils/helpers';
 import { holidayCalendars, getHolidayCount } from '../holidays';
+import { useNotificationPermission } from '../../../hooks/useNotificationPermission';
 
 export default function NewAlarmScreen() {
   const router = useRouter();
   const { alarms, addAlarm } = useAlarmStore();
+  const { ensurePermission } = useNotificationPermission();
   const { draft, setDraft, updateDraft, clearDraft } = useDraftAlarmStore();
 
   useEffect(() => {
@@ -39,10 +41,15 @@ export default function NewAlarmScreen() {
 
   if (!draft) return null;
 
-  const handleSave = () => {
+  const handleSave = useCallback(async () => {
+    // New alarms default to enabled, so check permission
+    if (draft.isEnabled) {
+      const granted = await ensurePermission();
+      if (!granted) return;
+    }
     addAlarm(draft);
     router.back();
-  };
+  }, [draft, addAlarm, ensurePermission, router]);
 
   const handleTimeChange = (hour: number, minute: number, isAM: boolean) => {
     updateDraft({ hour, minute, isAM });
@@ -156,7 +163,7 @@ export default function NewAlarmScreen() {
               <Entry
                 variant="selection"
                 label="Sound"
-                sublabel={`${draft.soundSettings.language} \u00B7 ${draft.soundSettings.voiceStyle === 'female' ? 'Female' : 'Male'}, ${draft.soundSettings.voicePersonality.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}`}
+                sublabel={`${draft.soundSettings.voiceStyle === 'female' ? 'Female' : 'Male'}, ${draft.soundSettings.voicePersonality.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}`}
                 icon={<Ionicons name="musical-notes-outline" size={20} color={colors.accentBrandLight} />}
                 iconBackgroundColor={colors.accentBrandDark}
                 onPress={() => router.push('/sound')}

@@ -9,10 +9,11 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, borderRadius, typography } from '../../../constants';
+import { colors, spacing, borderRadius, typography, featureFlags } from '../../../constants';
 import { useDraftAlarmStore } from '../../../stores';
 import { TopNav, SectionTitle, PageTitle } from '../../../components/ui';
 import { VoicePersonality } from '../../../types';
+import { useVoicePreview } from '../../../hooks/useVoicePreview';
 
 type VoiceStyle = 'female' | 'male';
 
@@ -75,7 +76,10 @@ export default function SoundScreen() {
     return null;
   }
 
+  const { playingPersonality, playPreview, stopPreview } = useVoicePreview();
+
   const handleVoiceStyleChange = (style: VoiceStyle) => {
+    stopPreview();
     updateDraft({
       soundSettings: {
         ...draft.soundSettings,
@@ -85,12 +89,17 @@ export default function SoundScreen() {
   };
 
   const handlePersonalityChange = (personality: VoicePersonality) => {
+    if (draft.soundSettings.voicePersonality === personality) {
+      playPreview(personality, draft.soundSettings.voiceStyle);
+      return;
+    }
     updateDraft({
       soundSettings: {
         ...draft.soundSettings,
         voicePersonality: personality,
       },
     });
+    setTimeout(() => router.back(), 500);
   };
 
   // Map language codes to region names
@@ -135,24 +144,28 @@ export default function SoundScreen() {
           subtitle="Choose a voice and wake up to a personalized message in your selected style."
         />
 
-        {/* Language Section */}
-        <SectionTitle title="Language" />
-        <View style={styles.languageContainer}>
-          <TouchableOpacity
-            style={styles.languageEntry}
-            onPress={() => router.push('/sound/language')}
-            activeOpacity={0.7}
-          >
-            <View style={styles.languageFlagContainer}>
-              <Text style={styles.languageFlag}>{getLanguageFlag()}</Text>
+        {/* Language Section (feature-flagged) */}
+        {featureFlags.languageSelection && (
+          <>
+            <SectionTitle title="Language" />
+            <View style={styles.languageContainer}>
+              <TouchableOpacity
+                style={styles.languageEntry}
+                onPress={() => router.push('/sound/language')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.languageFlagContainer}>
+                  <Text style={styles.languageFlag}>{getLanguageFlag()}</Text>
+                </View>
+                <View style={styles.languageTextContainer}>
+                  <Text style={styles.languageName}>{draft.soundSettings.language}</Text>
+                  <Text style={styles.languageRegion}>{getLanguageRegion()}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.accent} />
+              </TouchableOpacity>
             </View>
-            <View style={styles.languageTextContainer}>
-              <Text style={styles.languageName}>{draft.soundSettings.language}</Text>
-              <Text style={styles.languageRegion}>{getLanguageRegion()}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.accent} />
-          </TouchableOpacity>
-        </View>
+          </>
+        )}
 
         {/* Style Section with Female/Male pills in the header */}
         <View style={styles.styleHeaderContainer}>
@@ -208,7 +221,7 @@ export default function SoundScreen() {
                   <Ionicons
                     name={personality.icon}
                     size={20}
-                    color={colors.white}
+                    color={colors.accentBrandLight}
                   />
                 </View>
                 <View style={styles.personalityTextContainer}>
@@ -230,9 +243,27 @@ export default function SoundScreen() {
                   </Text>
                 </View>
                 {isSelected ? (
-                  <Ionicons name="checkmark" size={20} color={colors.white} />
+                  <Ionicons
+                    name={playingPersonality === personality.id ? 'stop' : 'checkmark'}
+                    size={20}
+                    color={colors.white}
+                  />
                 ) : (
-                  <Ionicons name="play" size={20} color={colors.accent} />
+                  <TouchableOpacity
+                    onPress={() =>
+                      playPreview(personality.id, draft.soundSettings.voiceStyle)
+                    }
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    style={styles.playButton}
+                  >
+                    <Ionicons
+                      name={
+                        playingPersonality === personality.id ? 'stop' : 'play'
+                      }
+                      size={20}
+                      color={colors.accent}
+                    />
+                  </TouchableOpacity>
                 )}
               </TouchableOpacity>
             );
@@ -378,5 +409,8 @@ const styles = StyleSheet.create({
   },
   personalityDescriptionSelected: {
     color: 'rgba(255, 255, 255, 0.7)',
+  },
+  playButton: {
+    padding: spacing.xs,
   },
 });

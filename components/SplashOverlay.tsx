@@ -1,41 +1,32 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withRepeat,
-  withTiming,
   withDelay,
+  withTiming,
   Easing,
   runOnJS,
 } from 'react-native-reanimated';
 import { colors } from '../constants';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const SHIMMER_WIDTH = SCREEN_WIDTH * 1.5;
 
 interface SplashOverlayProps {
   onFinish: () => void;
 }
 
-const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
-
 export default function SplashOverlay({ onFinish }: SplashOverlayProps) {
-  const shimmerX = useSharedValue(-SHIMMER_WIDTH);
   const overlayOpacity = useSharedValue(1);
+  const textOpacity = useSharedValue(0);
 
   useEffect(() => {
-    // Start shimmer loop immediately
-    shimmerX.value = withRepeat(
-      withTiming(SCREEN_WIDTH, {
-        duration: 1200,
-        easing: Easing.inOut(Easing.ease),
-      }),
-      -1, // infinite
-      false,
-    );
+    // Fade in the title text
+    textOpacity.value = withTiming(1, {
+      duration: 600,
+      easing: Easing.out(Easing.ease),
+    });
 
     // After 1 second, fade out the overlay
     overlayOpacity.value = withDelay(
@@ -48,12 +39,12 @@ export default function SplashOverlay({ onFinish }: SplashOverlayProps) {
     );
   }, []);
 
-  const shimmerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shimmerX.value }],
-  }));
-
   const containerStyle = useAnimatedStyle(() => ({
     opacity: overlayOpacity.value,
+  }));
+
+  const titleStyle = useAnimatedStyle(() => ({
+    opacity: textOpacity.value,
   }));
 
   return (
@@ -64,27 +55,7 @@ export default function SplashOverlay({ onFinish }: SplashOverlayProps) {
         end={{ x: 0.35, y: 0 }}
         style={StyleSheet.absoluteFillObject}
       />
-      <MaskedView
-        style={styles.maskedView}
-        maskElement={
-          <View style={styles.maskContainer}>
-            <Text style={styles.title}>Morrow</Text>
-          </View>
-        }
-      >
-        {/* Base white text layer */}
-        <View style={styles.maskContainer}>
-          <Text style={[styles.title, styles.titleVisible]}>Morrow</Text>
-        </View>
-
-        {/* Shimmer sweep */}
-        <AnimatedLinearGradient
-          style={[styles.shimmer, shimmerStyle]}
-          colors={['transparent', 'rgba(190, 156, 255, 0.6)', 'transparent']}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-        />
-      </MaskedView>
+      <Animated.Text style={[styles.title, titleStyle]}>Morrow</Animated.Text>
     </Animated.View>
   );
 }
@@ -96,29 +67,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  maskedView: {
-    width: SCREEN_WIDTH,
-    height: 100,
-  },
-  maskContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   title: {
     fontFamily: 'Outfit-Bold',
     fontSize: 56,
     letterSpacing: 3.36,
     textAlign: 'center',
-    color: 'black', // mask element needs opaque color
-  },
-  titleVisible: {
     color: colors.white,
-  },
-  shimmer: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: SHIMMER_WIDTH,
   },
 });

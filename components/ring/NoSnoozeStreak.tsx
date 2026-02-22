@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, spacing, borderRadius } from '../../constants';
+import { colors, borderRadius } from '../../constants';
 
 interface NoSnoozeStreakProps {
   /**
@@ -19,43 +19,47 @@ export function NoSnoozeStreak({ pastResults = [] }: NoSnoozeStreakProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>No-snooze streak</Text>
-      <View style={styles.daysRow}>
-        {recentPast.map((hit, index) => {
-          if (hit) {
-            return (
-              <View key={index} style={[styles.dayCircle, styles.streakCircle]}>
-                <Text style={styles.emoji}>{'\uD83D\uDD25'}</Text>
-              </View>
-            );
-          }
-
-          // Missed (snoozed)
-          return (
-            <View key={index} style={[styles.dayCircle, styles.missedCircle]}>
-              <Text style={styles.emoji}>{'\uD83E\uDEE5'}</Text>
+      <View style={styles.row}>
+        {/* Circles row */}
+        <View style={styles.circlesRow}>
+          {recentPast.map((hit, index) => (
+            <View
+              key={index}
+              style={[styles.circle, styles.pastCircle]}
+            >
+              <Text style={styles.pastEmoji}>
+                {hit ? '\uD83D\uDD25' : '\uD83E\uDEE5'}
+              </Text>
             </View>
-          );
-        })}
+          ))}
 
-        {/* Current alarm — "Now" */}
-        <View style={styles.nowWrapper}>
-          <View style={[styles.dayCircle, styles.nowCircle]}>
-            <Text style={[styles.emoji, styles.nowEmoji]}>
-              {'\uD83D\uDD25'}
-            </Text>
+          {/* Current alarm — "Now" */}
+          <View style={[styles.circle, styles.nowCircle]}>
+            <Text style={styles.nowEmoji}>{'\uD83D\uDD25'}</Text>
           </View>
-          <Text style={styles.nowLabel}>Now</Text>
+        </View>
+
+        {/* Labels row (invisible placeholders + visible "Now") */}
+        <View style={styles.labelsRow}>
+          {recentPast.map((_, index) => (
+            <Text key={index} style={[styles.label, styles.labelHidden]}>
+              Now
+            </Text>
+          ))}
+          <Text style={styles.label}>Now</Text>
         </View>
       </View>
     </View>
   );
 }
 
+const CIRCLE_SIZE = 36;
+
 const styles = StyleSheet.create({
   container: {
-    gap: 14,
-    paddingHorizontal: spacing['5xl'],
-    paddingVertical: spacing.sm,
+    gap: 16,
+    paddingHorizontal: 80,
+    paddingVertical: 10,
     alignItems: 'center',
   },
   title: {
@@ -64,47 +68,52 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     textAlign: 'center',
   },
-  daysRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    alignItems: 'flex-start',
+  row: {
+    gap: 4,
+    alignItems: 'center',
   },
-  dayCircle: {
-    flex: 1,
-    aspectRatio: 1,
+  circlesRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  labelsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  circle: {
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
     borderRadius: borderRadius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  streakCircle: {
-    backgroundColor: colors.accent,
-  },
-  missedCircle: {
+  pastCircle: {
     backgroundColor: colors.accentBrandDark,
-  },
-  nowWrapper: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 10,
   },
   nowCircle: {
-    flex: 0,
-    alignSelf: 'stretch',
-    backgroundColor: colors.accentBrandDark,
+    backgroundColor: colors.accent,
     borderWidth: 2,
     borderColor: colors.accent,
   },
-  nowEmoji: {
+  pastEmoji: {
+    fontSize: 18,
+    textAlign: 'center',
     opacity: 0.5,
   },
-  nowLabel: {
+  nowEmoji: {
+    fontSize: 18,
+    textAlign: 'center',
+  },
+  label: {
     fontFamily: 'Outfit-Regular',
     fontSize: 13,
     color: colors.textPrimary,
     textAlign: 'center',
+    width: CIRCLE_SIZE,
   },
-  emoji: {
-    fontSize: 18,
-    textAlign: 'center',
+  labelHidden: {
+    opacity: 0,
   },
 });

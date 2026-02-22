@@ -86,7 +86,7 @@ export default function LanguageScreen() {
         languageCode: language.code,
       },
     });
-    router.back();
+    setTimeout(() => router.back(), 500);
   };
 
   const renderItem = ({

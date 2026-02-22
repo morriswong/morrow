@@ -38,7 +38,7 @@ export default function CalendarSelectionScreen() {
 
   const handleSelectCalendar = (calendar: HolidayCalendar) => {
     updateDraft({ holidayCalendarId: calendar.id });
-    router.back();
+    setTimeout(() => router.back(), 500);
   };
 
   const popularCalendars = useMemo(
@@ -173,17 +173,18 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     gap: spacing.lg,
+    marginBottom: spacing.sm,
   },
   searchContainer: {
     paddingHorizontal: spacing.lg,
   },
   listContent: {
-    paddingHorizontal: spacing.lg,
     paddingBottom: spacing['3xl'],
   },
   sectionTitle: {
     ...typography.bodySmall,
     color: colors.textPrimary,
+    paddingHorizontal: spacing.lg,
     marginTop: spacing['3xl'],
     marginBottom: spacing.lg,
   },
@@ -192,6 +193,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     padding: spacing.lg,
+    marginHorizontal: spacing.lg,
     gap: spacing.md,
   },
   calendarItemSelected: {
@@ -233,6 +235,7 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     paddingVertical: spacing['3xl'],
+    paddingHorizontal: spacing.lg,
     alignItems: 'center',
   },
   emptyText: {

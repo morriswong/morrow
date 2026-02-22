@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,10 +14,22 @@ import { useAlarmStore } from '../stores';
 import { AlarmCard, AlarmListItem } from '../components/alarm';
 import { SectionTitle } from '../components/ui';
 import { formatTimeUntilAlarm, getNextEnabledAlarm, sortAlarmsByTimeAndDay, getGreeting } from '../utils';
+import { useNotificationPermission } from '../hooks/useNotificationPermission';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { alarms, toggleAlarm } = useAlarmStore();
+  const { alarms, toggleAlarm, getAlarm } = useAlarmStore();
+  const { ensurePermission } = useNotificationPermission();
+
+  const handleToggle = useCallback(async (id: string) => {
+    const alarm = getAlarm(id);
+    // If enabling an alarm, check notification permission first
+    if (alarm && !alarm.isEnabled) {
+      const granted = await ensurePermission();
+      if (!granted) return;
+    }
+    toggleAlarm(id);
+  }, [getAlarm, toggleAlarm, ensurePermission]);
 
   const nextAlarm = getNextEnabledAlarm(alarms);
   const allAlarmsSorted = sortAlarmsByTimeAndDay(alarms);
@@ -79,7 +91,7 @@ export default function HomeScreen() {
                   key={alarm.id}
                   alarm={alarm}
                   onPress={() => handleEditAlarm(alarm.id)}
-                  onToggle={() => toggleAlarm(alarm.id)}
+                  onToggle={() => handleToggle(alarm.id)}
                   isLast={index === allAlarmsSorted.length - 1}
                 />
               ))}

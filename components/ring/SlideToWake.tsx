@@ -71,7 +71,7 @@ export function SlideToWake({ onWake }: SlideToWakeProps) {
       {/* Sliding handle */}
       <GestureDetector gesture={panGesture}>
         <Animated.View style={[styles.handle, handleAnimatedStyle]}>
-          <Ionicons name="arrow-forward" size={24} color={colors.accentBrandDark} />
+          <Ionicons name="arrow-forward" size={36} color={colors.accentBrandDark} />
         </Animated.View>
       </GestureDetector>
     </View>

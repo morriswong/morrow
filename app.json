@@ -16,6 +16,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.morriswch.morrow",
+      "backgroundModes": ["audio"],
+      "entitlements": {
+        "aps-environment": "development"
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -26,7 +30,8 @@
         "backgroundColor": "#221A2E"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.morrow.app"
+      "package": "com.morrow.app",
+      "permissions": ["SCHEDULE_EXACT_ALARM", "USE_EXACT_ALARM", "VIBRATE", "RECEIVE_BOOT_COMPLETED"]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -34,7 +39,9 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font"
+      "expo-font",
+      ["expo-notifications", { "sounds": ["./assets/sounds/alarm_default.wav"] }],
+      ["expo-av", { "microphonePermission": false }]
     ],
     "extra": {
       "router": {},

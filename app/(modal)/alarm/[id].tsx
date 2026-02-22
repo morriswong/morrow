@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,12 +19,14 @@ import { TimePicker, SnoozePicker } from '../../../components/alarm';
 import { SnoozeDuration } from '../../../types';
 import { getDefaultHolidayCalendarId } from '../../../utils/helpers';
 import { holidayCalendars, getHolidayCount } from '../holidays';
+import { useNotificationPermission } from '../../../hooks/useNotificationPermission';
 
 export default function EditAlarmScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { alarms, getAlarm, updateAlarm, deleteAlarm } = useAlarmStore();
   const { draft, setDraft, updateDraft, clearDraft } = useDraftAlarmStore();
+  const { ensurePermission } = useNotificationPermission();
 
   useEffect(() => {
     const alarm = getAlarm(id);
@@ -43,12 +45,17 @@ export default function EditAlarmScreen() {
     }
   }, [draft?.skipHolidays]);
 
-  if (!draft) return null;
-
-  const handleSave = () => {
+  const handleSave = useCallback(async () => {
+    if (!draft) return;
+    if (draft.isEnabled) {
+      const granted = await ensurePermission();
+      if (!granted) return;
+    }
     updateAlarm(id, draft);
     router.back();
-  };
+  }, [draft, updateAlarm, id, ensurePermission, router]);
+
+  if (!draft) return null;
 
   const handleDelete = () => {
     Alert.alert(
@@ -180,7 +187,7 @@ export default function EditAlarmScreen() {
               <Entry
                 variant="selection"
                 label="Sound"
-                sublabel={`${draft.soundSettings.language} \u00B7 ${draft.soundSettings.voiceStyle === 'female' ? 'Female' : 'Male'}, ${draft.soundSettings.voicePersonality.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}`}
+                sublabel={`${draft.soundSettings.voiceStyle === 'female' ? 'Female' : 'Male'}, ${draft.soundSettings.voicePersonality.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}`}
                 icon={<Ionicons name="musical-notes-outline" size={20} color={colors.accentBrandLight} />}
                 iconBackgroundColor={colors.accentBrandDark}
                 onPress={() => router.push('/sound')}

@@ -12,10 +12,22 @@ export default function ModalLayout() {
     >
       <Stack.Screen name="alarm/new" />
       <Stack.Screen name="alarm/[id]" />
-      <Stack.Screen name="sound/index" />
-      <Stack.Screen name="sound/language" />
-      <Stack.Screen name="holidays/index" />
-      <Stack.Screen name="holidays/calendar" />
+      <Stack.Screen
+        name="sound/index"
+        options={{ gestureEnabled: true }}
+      />
+      <Stack.Screen
+        name="sound/language"
+        options={{ gestureEnabled: true }}
+      />
+      <Stack.Screen
+        name="holidays/index"
+        options={{ gestureEnabled: true }}
+      />
+      <Stack.Screen
+        name="holidays/calendar"
+        options={{ gestureEnabled: true }}
+      />
     </Stack>
   );
 }
