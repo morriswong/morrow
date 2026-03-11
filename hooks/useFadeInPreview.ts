@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { FadeInDuration } from '../types';
+import * as Speech from 'expo-speech';
+import { FadeInDuration, SoundSettings } from '../types';
 import { configureAudioSession, playAlarmSound, stopAlarmSound } from '../services';
+import { VOICE_DEMO_SCRIPTS, VOICE_PITCH, VOICE_RATE } from '../constants/voicePreview';
 
 const PREVIEW_DURATION_MS = 8000;
 
@@ -17,26 +19,45 @@ export function useFadeInPreview() {
 
   const stopPreview = useCallback(async () => {
     clearAutoStop();
+    await Speech.stop();
     await stopAlarmSound();
     setIsPreviewing(false);
   }, []);
 
   const togglePreview = useCallback(
-    async (fadeInDuration: FadeInDuration, customUri?: string | null) => {
+    async (fadeInDuration: FadeInDuration, soundSettings: SoundSettings) => {
       if (isPreviewing) {
         await stopPreview();
         return;
       }
 
-      await configureAudioSession();
-      await playAlarmSound(fadeInDuration, customUri);
-      setIsPreviewing(true);
+      const { customRecordingUri, voicePersonality, voiceStyle, languageCode } = soundSettings;
 
-      autoStopRef.current = setTimeout(async () => {
-        await stopAlarmSound();
-        setIsPreviewing(false);
-        autoStopRef.current = null;
-      }, PREVIEW_DURATION_MS);
+      if (customRecordingUri) {
+        // Custom recording: play WAV with fade-in effect
+        await configureAudioSession();
+        await playAlarmSound(fadeInDuration, customRecordingUri);
+        setIsPreviewing(true);
+
+        autoStopRef.current = setTimeout(async () => {
+          await stopAlarmSound();
+          setIsPreviewing(false);
+          autoStopRef.current = null;
+        }, PREVIEW_DURATION_MS);
+      } else {
+        // No recording: preview the TTS voice personality
+        const script = VOICE_DEMO_SCRIPTS[voicePersonality];
+        if (!script) return;
+
+        setIsPreviewing(true);
+        Speech.speak(script, {
+          language: languageCode || 'en-US',
+          pitch: VOICE_PITCH[voiceStyle],
+          rate: VOICE_RATE[voiceStyle],
+          onDone: () => setIsPreviewing(false),
+          onError: () => setIsPreviewing(false),
+        });
+      }
     },
     [isPreviewing, stopPreview],
   );
@@ -44,6 +65,7 @@ export function useFadeInPreview() {
   useEffect(() => {
     return () => {
       clearAutoStop();
+      Speech.stop();
       stopAlarmSound();
     };
   }, []);

@@ -13,6 +13,7 @@ export {
 export {
   configureAudioSession,
   playAlarmSound,
+  playTTSAlarm,
   stopAlarmSound,
   speakGreeting,
 } from './audioService';

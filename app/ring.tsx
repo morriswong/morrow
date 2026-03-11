@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, BackHandler } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { SlideToWake } from '../components/ring/SlideToWake';
 import {
   configureAudioSession,
   playAlarmSound,
+  playTTSAlarm,
   stopAlarmSound,
   speakGreeting,
   cancelAlarmNotification,
@@ -57,14 +58,16 @@ export default function RingScreen() {
 
       if (!alarm || !mounted) return;
 
-      await playAlarmSound(alarm.fadeInDuration, alarm.soundSettings.customRecordingUri);
-
-      // Speak the personalized greeting after a short delay
-      setTimeout(() => {
-        if (mounted && alarm) {
-          speakGreeting(alarm);
-        }
-      }, 2000);
+      if (alarm.soundSettings.customRecordingUri) {
+        // Custom recording: play WAV with fade-in, then TTS greeting after 2s
+        await playAlarmSound(alarm.fadeInDuration, alarm.soundSettings.customRecordingUri);
+        setTimeout(() => {
+          if (mounted && alarm) speakGreeting(alarm);
+        }, 2000);
+      } else {
+        // No recording: TTS voice is the alarm, loops until dismissed
+        playTTSAlarm(alarm);
+      }
     }
 
     startAlarm();
@@ -135,19 +138,14 @@ export default function RingScreen() {
         </View>
 
         {/* Middle: streak centered between alarm info and buttons */}
-        <View style={styles.middle}>
-          {isRepeatingAlarm && <NoSnoozeStreak />}
-        </View>
+        <View style={styles.middle}>{isRepeatingAlarm && <NoSnoozeStreak />}</View>
 
         {/* Bottom buttons */}
         <View style={styles.bottomButtons}>
           <SlideToWake onWake={handleWakeUp} />
           {snoozeDuration > 0 && (
             <Pressable
-              style={({ pressed }) => [
-                styles.snoozeButton,
-                pressed && styles.snoozeButtonPressed,
-              ]}
+              style={({ pressed }) => [styles.snoozeButton, pressed && styles.snoozeButtonPressed]}
               onPress={handleSnooze}
             >
               <Text style={styles.snoozeText}>Snooze</Text>

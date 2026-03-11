@@ -7,6 +7,7 @@ import { VOICE_DEMO_SCRIPTS, VOICE_PITCH, VOICE_RATE } from '../constants/voiceP
 
 let currentSound: Audio.Sound | null = null;
 let fadeInIntervalId: ReturnType<typeof setInterval> | null = null;
+let ttsLoopTimeout: ReturnType<typeof setTimeout> | null = null;
 
 // ── Audio Session ───────────────────────────────────────────────────────
 
@@ -19,27 +20,16 @@ export async function configureAudioSession(): Promise<void> {
   });
 }
 
-// ── Alarm Sound Playback ────────────────────────────────────────────────
+// ── Alarm Sound Playback (custom recording) ─────────────────────────────
 
-export async function playAlarmSound(
-  fadeInDuration: number = 0,
-  customUri?: string | null
-): Promise<void> {
+export async function playAlarmSound(fadeInDuration: number = 0, customUri: string): Promise<void> {
   try {
-    // Stop any existing sound first
     await stopAlarmSound();
 
-    const source = customUri
-      ? { uri: customUri }
-      : require('../assets/sounds/alarm_default.wav');
     const startVolume = fadeInDuration > 0 ? 0.05 : 1.0;
     const { sound } = await Audio.Sound.createAsync(
-      source,
-      {
-        isLooping: true,
-        volume: startVolume,
-        shouldPlay: true,
-      }
+      { uri: customUri },
+      { isLooping: true, volume: startVolume, shouldPlay: true },
     );
 
     currentSound = sound;
@@ -63,18 +53,44 @@ export async function playAlarmSound(
   }
 }
 
+// ── TTS Alarm Loop (default — no custom recording) ──────────────────────
+
+export function playTTSAlarm(alarm: Alarm): void {
+  const { voicePersonality, voiceStyle, languageCode } = alarm.soundSettings;
+  const script = VOICE_DEMO_SCRIPTS[voicePersonality];
+  if (!script) return;
+
+  const speak = () => {
+    Speech.speak(script, {
+      language: languageCode || 'en-US',
+      pitch: VOICE_PITCH[voiceStyle],
+      rate: VOICE_RATE[voiceStyle],
+      onDone: () => {
+        ttsLoopTimeout = setTimeout(speak, 3000);
+      },
+      onError: () => {
+        ttsLoopTimeout = setTimeout(speak, 3000);
+      },
+    });
+  };
+
+  speak();
+}
+
 export async function stopAlarmSound(): Promise<void> {
   try {
-    // Clear any ongoing fade-in interval
     if (fadeInIntervalId) {
       clearInterval(fadeInIntervalId);
       fadeInIntervalId = null;
     }
 
-    // Stop TTS
+    if (ttsLoopTimeout) {
+      clearTimeout(ttsLoopTimeout);
+      ttsLoopTimeout = null;
+    }
+
     await Speech.stop();
 
-    // Stop and unload audio
     if (currentSound) {
       await currentSound.stopAsync();
       await currentSound.unloadAsync();
@@ -85,7 +101,7 @@ export async function stopAlarmSound(): Promise<void> {
   }
 }
 
-// ── Voice Greeting ──────────────────────────────────────────────────────
+// ── Voice Greeting (plays over custom recording) ─────────────────────────
 
 export async function speakGreeting(alarm: Alarm): Promise<void> {
   const { voicePersonality, voiceStyle } = alarm.soundSettings;
@@ -107,14 +123,9 @@ export async function speakGreeting(alarm: Alarm): Promise<void> {
       language: alarm.soundSettings.languageCode || 'en-US',
       pitch: VOICE_PITCH[voiceStyle],
       rate: VOICE_RATE[voiceStyle],
-      onDone: async () => {
-        // Restore alarm to full volume after greeting
+      onDone: () => {
         if (currentSound) {
-          try {
-            await currentSound.setVolumeAsync(1.0);
-          } catch {
-            // Sound may have been unloaded
-          }
+          currentSound.setVolumeAsync(1.0).catch(() => {});
         }
         resolve();
       },
