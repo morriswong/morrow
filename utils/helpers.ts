@@ -120,8 +120,9 @@ export function createDefaultAlarm(): Alarm {
       voicePersonality: 'friendly-coach',
       language: 'English',
       languageCode: 'en-GB',
+      customRecordingUri: null,
     },
-    volume: 70,
+    fadeInDuration: 0,
     snoozeDuration: 5,
   };
 }

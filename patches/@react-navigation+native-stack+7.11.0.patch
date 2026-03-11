@@ -1,0 +1,48 @@
+diff --git a/node_modules/@react-navigation/native-stack/lib/module/views/useHeaderConfigProps.js b/node_modules/@react-navigation/native-stack/lib/module/views/useHeaderConfigProps.js
+index 492390b..9f56c43 100644
+--- a/node_modules/@react-navigation/native-stack/lib/module/views/useHeaderConfigProps.js
++++ b/node_modules/@react-navigation/native-stack/lib/module/views/useHeaderConfigProps.js
+@@ -328,7 +328,7 @@ export function useHeaderConfigProps({
+     disableBackButtonMenu: headerBackButtonMenuEnabled === false,
+     hidden: headerShown === false,
+     hideBackButton: headerBackVisible === false,
+-    hideShadow: headerShadowVisible === false || headerBackground != null || headerTransparent && headerShadowVisible !== true,
++    hideShadow: Boolean(headerShadowVisible === false || headerBackground != null || headerTransparent && headerShadowVisible !== true),
+     largeTitle: headerLargeTitleEnabled,
+     largeTitleBackgroundColor,
+     largeTitleColor,
+@@ -340,7 +340,7 @@ export function useHeaderConfigProps({
+     titleColor,
+     titleFontFamily,
+     titleFontSize,
+-    titleFontWeight: String(titleFontWeight),
++    titleFontWeight: titleFontWeight != null ? String(titleFontWeight) : undefined,
+     topInsetEnabled: headerTopInsetEnabled,
+     translucent: translucent === true,
+     children,
+diff --git a/node_modules/@react-navigation/native-stack/src/views/useHeaderConfigProps.tsx b/node_modules/@react-navigation/native-stack/src/views/useHeaderConfigProps.tsx
+index 14a0093..832fea3 100644
+--- a/node_modules/@react-navigation/native-stack/src/views/useHeaderConfigProps.tsx
++++ b/node_modules/@react-navigation/native-stack/src/views/useHeaderConfigProps.tsx
+@@ -478,10 +478,10 @@ export function useHeaderConfigProps({
+     disableBackButtonMenu: headerBackButtonMenuEnabled === false,
+     hidden: headerShown === false,
+     hideBackButton: headerBackVisible === false,
+-    hideShadow:
++    hideShadow: Boolean(
+       headerShadowVisible === false ||
+       headerBackground != null ||
+-      (headerTransparent && headerShadowVisible !== true),
++      (headerTransparent && headerShadowVisible !== true)),
+     largeTitle: headerLargeTitleEnabled,
+     largeTitleBackgroundColor,
+     largeTitleColor,
+@@ -493,7 +493,7 @@ export function useHeaderConfigProps({
+     titleColor,
+     titleFontFamily,
+     titleFontSize,
+-    titleFontWeight: String(titleFontWeight),
++    titleFontWeight: titleFontWeight != null ? String(titleFontWeight) : undefined,
+     topInsetEnabled: headerTopInsetEnabled,
+     translucent: translucent === true,
+     children,

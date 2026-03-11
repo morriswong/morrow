@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,11 +9,13 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
 import { colors, spacing, borderRadius, typography, featureFlags } from '../../../constants';
 import { useDraftAlarmStore } from '../../../stores';
 import { TopNav, SectionTitle, PageTitle } from '../../../components/ui';
 import { VoicePersonality } from '../../../types';
 import { useVoicePreview } from '../../../hooks/useVoicePreview';
+import { useRecording } from '../../../hooks/useRecording';
 
 type VoiceStyle = 'female' | 'male';
 
@@ -77,6 +79,60 @@ export default function SoundScreen() {
   }
 
   const { playingPersonality, playPreview, stopPreview } = useVoicePreview();
+  const { isRecording, recordingDurationMs, startRecording, stopRecording } = useRecording();
+  const previewSoundRef = useRef<Audio.Sound | null>(null);
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+
+  const customUri = draft.soundSettings.customRecordingUri;
+
+  const formatDuration = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleStopRecording = async () => {
+    const uri = await stopRecording();
+    if (uri) {
+      updateDraft({ soundSettings: { ...draft.soundSettings, customRecordingUri: uri } });
+    }
+  };
+
+  const handlePlayPreview = async () => {
+    if (!customUri) return;
+    if (isPlayingPreview) {
+      await previewSoundRef.current?.stopAsync();
+      await previewSoundRef.current?.unloadAsync();
+      previewSoundRef.current = null;
+      setIsPlayingPreview(false);
+      return;
+    }
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: customUri },
+        { shouldPlay: true }
+      );
+      previewSoundRef.current = sound;
+      setIsPlayingPreview(true);
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (!status.isLoaded || status.didJustFinish) {
+          sound.unloadAsync().catch(() => {});
+          previewSoundRef.current = null;
+          setIsPlayingPreview(false);
+        }
+      });
+    } catch (e) {
+      console.warn('[SoundScreen] Failed to play preview:', e);
+    }
+  };
+
+  const handleDeleteRecording = () => {
+    previewSoundRef.current?.unloadAsync().catch(() => {});
+    previewSoundRef.current = null;
+    setIsPlayingPreview(false);
+    updateDraft({ soundSettings: { ...draft.soundSettings, customRecordingUri: null } });
+  };
 
   const handleVoiceStyleChange = (style: VoiceStyle) => {
     stopPreview();
@@ -167,35 +223,105 @@ export default function SoundScreen() {
           </>
         )}
 
-        {/* Style Section with Female/Male pills in the header */}
-        <View style={styles.styleHeaderContainer}>
-          <Text style={styles.styleHeaderLabel}>Style</Text>
-          <View style={styles.stylePillsContainer}>
-            {(['female', 'male'] as VoiceStyle[]).map((style) => {
-              const isSelected = draft.soundSettings.voiceStyle === style;
-              return (
+        {/* Alarm Sound Section */}
+        <SectionTitle title="Alarm sound" />
+        <View style={styles.recordingContainer}>
+          <View style={[styles.recordingCard, customUri && styles.recordingCardSelected]}>
+            {/* Icon */}
+            <View style={[styles.recordingIconContainer, customUri && styles.recordingIconContainerSelected]}>
+              <Ionicons
+                name={isRecording ? 'radio-button-on' : 'mic-outline'}
+                size={20}
+                color={isRecording ? colors.error : customUri ? colors.white : colors.accentBrandLight}
+              />
+            </View>
+
+            {/* Label */}
+            <View style={styles.recordingTextContainer}>
+              {isRecording ? (
+                <>
+                  <Text style={styles.recordingLabel}>Recording...</Text>
+                  <Text style={styles.recordingDuration}>{formatDuration(recordingDurationMs)}</Text>
+                </>
+              ) : customUri ? (
+                <>
+                  <Text style={[styles.recordingLabel, styles.recordingLabelSelected]}>Your recording</Text>
+                  <Text style={[styles.recordingActiveLabel, styles.recordingActiveLabelSelected]}>Active alarm sound</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.recordingLabel}>Default alarm sound</Text>
+                  <Text style={styles.recordingDuration}>Tap record to use your own</Text>
+                </>
+              )}
+            </View>
+
+            {/* Actions */}
+            {isRecording ? (
+              <TouchableOpacity style={styles.recordingActionButton} onPress={handleStopRecording} activeOpacity={0.7}>
+                <Text style={styles.recordingActionText}>Stop</Text>
+              </TouchableOpacity>
+            ) : customUri ? (
+              <View style={styles.recordingActions}>
                 <TouchableOpacity
-                  key={style}
-                  style={[
-                    styles.stylePill,
-                    isSelected && styles.stylePillSelected,
-                  ]}
-                  onPress={() => handleVoiceStyleChange(style)}
+                  style={styles.recordingActionButton}
+                  onPress={handlePlayPreview}
                   activeOpacity={0.7}
                 >
-                  <Text
-                    style={[
-                      styles.stylePillText,
-                      isSelected && styles.stylePillTextSelected,
-                    ]}
-                  >
-                    {style === 'female' ? 'Female' : 'Male'}
-                  </Text>
+                  <Ionicons
+                    name={isPlayingPreview ? 'stop' : 'play'}
+                    size={16}
+                    color={colors.white}
+                  />
                 </TouchableOpacity>
-              );
-            })}
+                <TouchableOpacity
+                  style={styles.recordingDeleteButton}
+                  onPress={handleDeleteRecording}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="trash-outline" size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+                <Ionicons name="checkmark-circle" size={20} color={colors.accent} />
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.recordingActionButton} onPress={startRecording} activeOpacity={0.7}>
+                <Text style={styles.recordingActionText}>Record</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
+
+        {/* Voice Greeting Section */}
+        <SectionTitle
+          title="Voice greeting"
+          action={
+            <View style={styles.stylePillsContainer}>
+              {(['female', 'male'] as VoiceStyle[]).map((style) => {
+                const isSelected = draft.soundSettings.voiceStyle === style;
+                return (
+                  <TouchableOpacity
+                    key={style}
+                    style={[
+                      styles.stylePill,
+                      isSelected && styles.stylePillSelected,
+                    ]}
+                    onPress={() => handleVoiceStyleChange(style)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.stylePillText,
+                        isSelected && styles.stylePillTextSelected,
+                      ]}
+                    >
+                      {style === 'female' ? 'Female' : 'Male'}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          }
+        />
 
         {/* Voice Personality List */}
         <View style={styles.personalityListContainer}>
@@ -209,7 +335,6 @@ export default function SoundScreen() {
                 key={personality.id}
                 style={[
                   styles.personalityItem,
-                  isSelected && styles.personalityItemSelected,
                   isFirst && styles.personalityItemFirst,
                   isLast && styles.personalityItemLast,
                   !isLast && styles.personalityItemBorder,
@@ -225,28 +350,18 @@ export default function SoundScreen() {
                   />
                 </View>
                 <View style={styles.personalityTextContainer}>
-                  <Text
-                    style={[
-                      styles.personalityName,
-                      isSelected && styles.personalityNameSelected,
-                    ]}
-                  >
+                  <Text style={styles.personalityName}>
                     {personality.label}
                   </Text>
-                  <Text
-                    style={[
-                      styles.personalityDescription,
-                      isSelected && styles.personalityDescriptionSelected,
-                    ]}
-                  >
+                  <Text style={styles.personalityDescription}>
                     {personality.description}
                   </Text>
                 </View>
                 {isSelected ? (
                   <Ionicons
-                    name={playingPersonality === personality.id ? 'stop' : 'checkmark'}
+                    name={playingPersonality === personality.id ? 'stop' : 'checkmark-circle'}
                     size={20}
-                    color={colors.white}
+                    color={colors.accent}
                   />
                 ) : (
                   <TouchableOpacity
@@ -323,18 +438,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 
-  // Style Section Header
-  styleHeaderContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  styleHeaderLabel: {
-    ...typography.label,
-    color: colors.textSecondary,
-  },
   stylePillsContainer: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -369,9 +472,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     gap: spacing.md,
   },
-  personalityItemSelected: {
-    backgroundColor: colors.accent,
-  },
   personalityItemFirst: {
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
@@ -399,18 +499,92 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: colors.textPrimary,
   },
-  personalityNameSelected: {
-    color: colors.white,
-  },
   personalityDescription: {
     ...typography.bodySmall,
     color: colors.textSecondary,
     marginTop: 2,
   },
-  personalityDescriptionSelected: {
-    color: 'rgba(255, 255, 255, 0.7)',
-  },
   playButton: {
     padding: spacing.xs,
+  },
+
+  // Custom Recording Section
+  recordingContainer: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  recordingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  recordingCardSelected: {
+    backgroundColor: colors.accent,
+  },
+  recordingIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: colors.accentBrandDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recordingIconContainerSelected: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  recordingTextContainer: {
+    flex: 1,
+    gap: 2,
+  },
+  recordingLabel: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 16,
+    color: colors.textPrimary,
+  },
+  recordingLabelSelected: {
+    color: colors.white,
+  },
+  recordingDuration: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+  },
+  recordingActiveLabel: {
+    ...typography.bodySmall,
+    color: colors.accent,
+  },
+  recordingActiveLabelSelected: {
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  recordingActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
+  recordingActionButton: {
+    height: 32,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 32,
+  },
+  recordingActionText: {
+    fontFamily: 'Outfit-SemiBold',
+    fontSize: 13,
+    color: colors.white,
+  },
+  recordingDeleteButton: {
+    width: 32,
+    height: 32,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

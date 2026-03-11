@@ -1,0 +1,48 @@
+diff --git a/node_modules/@react-navigation/bottom-tabs/lib/module/unstable/NativeScreen/useHeaderConfig.js b/node_modules/@react-navigation/bottom-tabs/lib/module/unstable/NativeScreen/useHeaderConfig.js
+index 0d44704..41d397d 100644
+--- a/node_modules/@react-navigation/bottom-tabs/lib/module/unstable/NativeScreen/useHeaderConfig.js
++++ b/node_modules/@react-navigation/bottom-tabs/lib/module/unstable/NativeScreen/useHeaderConfig.js
+@@ -280,7 +280,7 @@ export function useHeaderConfig({
+     color: tintColor,
+     direction,
+     hidden: headerShown === false,
+-    hideShadow: headerShadowVisible === false || headerBackground != null || headerTransparent && headerShadowVisible !== true,
++    hideShadow: Boolean(headerShadowVisible === false || headerBackground != null || headerTransparent && headerShadowVisible !== true),
+     largeTitle: headerLargeTitleEnabled,
+     largeTitleBackgroundColor,
+     largeTitleColor,
+@@ -292,7 +292,7 @@ export function useHeaderConfig({
+     titleColor,
+     titleFontFamily,
+     titleFontSize,
+-    titleFontWeight: String(titleFontWeight),
++    titleFontWeight: titleFontWeight != null ? String(titleFontWeight) : undefined,
+     topInsetEnabled: headerTopInsetEnabled,
+     translucent: translucent === true,
+     children,
+diff --git a/node_modules/@react-navigation/bottom-tabs/src/unstable/NativeScreen/useHeaderConfig.tsx b/node_modules/@react-navigation/bottom-tabs/src/unstable/NativeScreen/useHeaderConfig.tsx
+index 260d7cc..c376d5e 100644
+--- a/node_modules/@react-navigation/bottom-tabs/src/unstable/NativeScreen/useHeaderConfig.tsx
++++ b/node_modules/@react-navigation/bottom-tabs/src/unstable/NativeScreen/useHeaderConfig.tsx
+@@ -408,10 +408,10 @@ export function useHeaderConfig({
+     color: tintColor,
+     direction,
+     hidden: headerShown === false,
+-    hideShadow:
++    hideShadow: Boolean(
+       headerShadowVisible === false ||
+       headerBackground != null ||
+-      (headerTransparent && headerShadowVisible !== true),
++      (headerTransparent && headerShadowVisible !== true)),
+     largeTitle: headerLargeTitleEnabled,
+     largeTitleBackgroundColor,
+     largeTitleColor,
+@@ -423,7 +423,7 @@ export function useHeaderConfig({
+     titleColor,
+     titleFontFamily,
+     titleFontSize,
+-    titleFontWeight: String(titleFontWeight),
++    titleFontWeight: titleFontWeight != null ? String(titleFontWeight) : undefined,
+     topInsetEnabled: headerTopInsetEnabled,
+     translucent: translucent === true,
+     children,

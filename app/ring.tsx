@@ -57,7 +57,7 @@ export default function RingScreen() {
 
       if (!alarm || !mounted) return;
 
-      await playAlarmSound(alarm.volume);
+      await playAlarmSound(alarm.fadeInDuration, alarm.soundSettings.customRecordingUri);
 
       // Speak the personalized greeting after a short delay
       setTimeout(() => {

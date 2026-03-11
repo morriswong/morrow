@@ -20,8 +20,9 @@ const seedAlarms: Alarm[] = [
       voicePersonality: 'friendly-coach',
       language: 'English',
       languageCode: 'en-GB',
+      customRecordingUri: null,
     },
-    volume: 70,
+    fadeInDuration: 0,
     snoozeDuration: 5,
   },
   {
@@ -39,8 +40,9 @@ const seedAlarms: Alarm[] = [
       voicePersonality: 'sweet-lover',
       language: 'French',
       languageCode: 'fr-FR',
+      customRecordingUri: null,
     },
-    volume: 70,
+    fadeInDuration: 0,
     snoozeDuration: 30,
   },
 ];
@@ -104,7 +106,7 @@ export const useAlarmStore = create<AlarmState>()(
     {
       name: 'morrow-alarms',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 2,
+      version: 4,
       migrate: (persistedState: any, version: number) => {
         if (version === 0) {
           // Add voicePersonality to existing alarms that don't have it
@@ -122,6 +124,27 @@ export const useAlarmStore = create<AlarmState>()(
           // Add seed alarms if user has no alarms
           if (!persistedState.alarms || persistedState.alarms.length === 0) {
             persistedState.alarms = seedAlarms;
+          }
+        }
+        if (version < 3) {
+          // Replace volume with fadeInDuration
+          if (persistedState.alarms) {
+            persistedState.alarms = persistedState.alarms.map((alarm: any) => {
+              const { volume, ...rest } = alarm;
+              return { ...rest, fadeInDuration: 0 };
+            });
+          }
+        }
+        if (version < 4) {
+          // Add customRecordingUri to existing alarms
+          if (persistedState.alarms) {
+            persistedState.alarms = persistedState.alarms.map((alarm: any) => ({
+              ...alarm,
+              soundSettings: {
+                ...alarm.soundSettings,
+                customRecordingUri: alarm.soundSettings?.customRecordingUri ?? null,
+              },
+            }));
           }
         }
         return persistedState as AlarmState;

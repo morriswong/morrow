@@ -5,7 +5,11 @@ export interface SoundSettings {
   voicePersonality: VoicePersonality;
   language: string;
   languageCode: string;
+  customRecordingUri: string | null;
 }
+
+export type FadeInDuration = 0 | 30 | 60 | 120 | 300;
+export const FADE_IN_OPTIONS: FadeInDuration[] = [0, 30, 60, 120, 300];
 
 export interface Alarm {
   id: string;
@@ -18,7 +22,7 @@ export interface Alarm {
   skipHolidays: boolean;
   holidayCalendarId: string | null;
   soundSettings: SoundSettings;
-  volume: number;
+  fadeInDuration: FadeInDuration;
   snoozeDuration: 0 | 5 | 10 | 15 | 20 | 30;
 }
 

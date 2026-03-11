@@ -14,18 +14,20 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, typography } from '../../../constants';
 import { useAlarmStore, useDraftAlarmStore } from '../../../stores';
 import { createDefaultAlarm } from '../../../utils';
-import { TopNav, Button, Card, Entry, DayPicker, Slider, PageTitle } from '../../../components/ui';
-import { TimePicker, SnoozePicker } from '../../../components/alarm';
-import { SnoozeDuration } from '../../../types';
+import { TopNav, Button, Card, Entry, DayPicker, PageTitle } from '../../../components/ui';
+import { TimePicker, SnoozePicker, FadeInPicker } from '../../../components/alarm';
+import { SnoozeDuration, FadeInDuration } from '../../../types';
 import { getDefaultHolidayCalendarId } from '../../../utils/helpers';
 import { holidayCalendars, getHolidayCount } from '../holidays';
 import { useNotificationPermission } from '../../../hooks/useNotificationPermission';
+import { useFadeInPreview } from '../../../hooks/useFadeInPreview';
 
 export default function NewAlarmScreen() {
   const router = useRouter();
   const { alarms, addAlarm } = useAlarmStore();
   const { ensurePermission } = useNotificationPermission();
   const { draft, setDraft, updateDraft, clearDraft } = useDraftAlarmStore();
+  const { isPreviewing, togglePreview, stopPreview } = useFadeInPreview();
 
   useEffect(() => {
     setDraft(createDefaultAlarm());
@@ -63,8 +65,8 @@ export default function NewAlarmScreen() {
     updateDraft({ snoozeDuration: duration });
   };
 
-  const handleVolumeChange = (volume: number) => {
-    updateDraft({ volume });
+  const handleFadeInChange = (fadeInDuration: FadeInDuration) => {
+    updateDraft({ fadeInDuration });
   };
 
   const handleSkipHolidaysToggle = (value: boolean) => {
@@ -163,22 +165,40 @@ export default function NewAlarmScreen() {
               <Entry
                 variant="selection"
                 label="Sound"
-                sublabel={`${draft.soundSettings.voiceStyle === 'female' ? 'Female' : 'Male'}, ${draft.soundSettings.voicePersonality.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}`}
+                sublabel={draft.soundSettings.customRecordingUri ? 'Custom recording' : `${draft.soundSettings.voiceStyle === 'female' ? 'Female' : 'Male'}, ${draft.soundSettings.voicePersonality.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}`}
                 icon={<Ionicons name="musical-notes-outline" size={20} color={colors.accentBrandLight} />}
                 iconBackgroundColor={colors.accentBrandDark}
                 onPress={() => router.push('/sound')}
                 noBackground
                 noBorderRadius
               />
-              <View style={styles.sliderContainer}>
-                <Slider
-                  value={draft.volume}
-                  onValueChange={handleVolumeChange}
-                  min={0}
-                  max={100}
-                  showIcons
-                />
+            </Card>
+          </View>
+
+          {/* Fade In Duration */}
+          <View style={styles.cardContainer}>
+            <Card style={styles.snoozeCard}>
+              <View style={styles.snoozeHeader}>
+                <View style={styles.snoozeIconContainer}>
+                  <Ionicons name="sunny-outline" size={20} color={colors.accentBrandLight} />
+                </View>
+                <Text style={styles.snoozeLabel}>Fade in</Text>
+                <TouchableOpacity
+                  onPress={() => togglePreview(draft.fadeInDuration, draft.soundSettings.customRecordingUri)}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  style={styles.previewButton}
+                >
+                  <Ionicons
+                    name={isPreviewing ? 'stop' : 'play'}
+                    size={20}
+                    color={colors.accent}
+                  />
+                </TouchableOpacity>
               </View>
+              <FadeInPicker
+                value={draft.fadeInDuration}
+                onValueChange={(d) => { stopPreview(); handleFadeInChange(d); }}
+              />
             </Card>
           </View>
 
@@ -242,11 +262,6 @@ const styles = StyleSheet.create({
     padding: 0,
     overflow: 'hidden',
   },
-  sliderContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
-    paddingTop: spacing.sm,
-  },
   snoozeCard: {
     padding: spacing.lg,
   },
@@ -267,6 +282,10 @@ const styles = StyleSheet.create({
   snoozeLabel: {
     ...typography.body,
     color: colors.textPrimary,
+    flex: 1,
+  },
+  previewButton: {
+    padding: spacing.xs,
   },
   holidaySelectorContainer: {
     paddingHorizontal: spacing.sm,

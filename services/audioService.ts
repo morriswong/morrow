@@ -6,11 +6,13 @@ import { VOICE_DEMO_SCRIPTS, VOICE_PITCH, VOICE_RATE } from '../constants/voiceP
 // ── Module State ────────────────────────────────────────────────────────
 
 let currentSound: Audio.Sound | null = null;
+let fadeInIntervalId: ReturnType<typeof setInterval> | null = null;
 
 // ── Audio Session ───────────────────────────────────────────────────────
 
 export async function configureAudioSession(): Promise<void> {
   await Audio.setAudioModeAsync({
+    allowsRecordingIOS: false,
     playsInSilentModeIOS: true,
     staysActiveInBackground: true,
     shouldDuckAndroid: false,
@@ -19,21 +21,43 @@ export async function configureAudioSession(): Promise<void> {
 
 // ── Alarm Sound Playback ────────────────────────────────────────────────
 
-export async function playAlarmSound(volume: number = 70): Promise<void> {
+export async function playAlarmSound(
+  fadeInDuration: number = 0,
+  customUri?: string | null
+): Promise<void> {
   try {
     // Stop any existing sound first
     await stopAlarmSound();
 
+    const source = customUri
+      ? { uri: customUri }
+      : require('../assets/sounds/alarm_default.wav');
+    const startVolume = fadeInDuration > 0 ? 0.05 : 1.0;
     const { sound } = await Audio.Sound.createAsync(
-      require('../assets/sounds/alarm_default.wav'),
+      source,
       {
         isLooping: true,
-        volume: Math.min(Math.max(volume / 100, 0), 1),
+        volume: startVolume,
         shouldPlay: true,
       }
     );
 
     currentSound = sound;
+
+    if (fadeInDuration > 0) {
+      const steps = 30;
+      const intervalMs = (fadeInDuration * 1000) / steps;
+      const volumeStep = (1.0 - startVolume) / steps;
+      let currentVol = startVolume;
+      fadeInIntervalId = setInterval(async () => {
+        currentVol = Math.min(currentVol + volumeStep, 1.0);
+        await sound.setVolumeAsync(currentVol).catch(() => {});
+        if (currentVol >= 1.0) {
+          clearInterval(fadeInIntervalId!);
+          fadeInIntervalId = null;
+        }
+      }, intervalMs);
+    }
   } catch (error) {
     console.warn('[audioService] Failed to play alarm sound:', error);
   }
@@ -41,6 +65,12 @@ export async function playAlarmSound(volume: number = 70): Promise<void> {
 
 export async function stopAlarmSound(): Promise<void> {
   try {
+    // Clear any ongoing fade-in interval
+    if (fadeInIntervalId) {
+      clearInterval(fadeInIntervalId);
+      fadeInIntervalId = null;
+    }
+
     // Stop TTS
     await Speech.stop();
 
@@ -78,11 +108,10 @@ export async function speakGreeting(alarm: Alarm): Promise<void> {
       pitch: VOICE_PITCH[voiceStyle],
       rate: VOICE_RATE[voiceStyle],
       onDone: async () => {
-        // Restore alarm volume
+        // Restore alarm to full volume after greeting
         if (currentSound) {
           try {
-            const vol = Math.min(Math.max(alarm.volume / 100, 0), 1);
-            await currentSound.setVolumeAsync(vol);
+            await currentSound.setVolumeAsync(1.0);
           } catch {
             // Sound may have been unloaded
           }

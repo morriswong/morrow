@@ -23,12 +23,12 @@ export async function configureNotificationCategories() {
     {
       identifier: 'snooze',
       buttonTitle: 'Snooze',
-      options: { opensAppToForeground: true },
+      options: { opensAppToForeground: false },
     },
     {
       identifier: 'dismiss',
       buttonTitle: 'Dismiss',
-      options: { opensAppToForeground: true },
+      options: { opensAppToForeground: false },
     },
   ]);
 }

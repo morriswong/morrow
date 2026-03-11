@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, PanResponder, Animated, Text } from 'react-native';
+import { View, StyleSheet, PanResponder, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius } from '../../constants';
 
@@ -18,39 +18,56 @@ export function Slider({
   max = 100,
   showIcons = true,
 }: SliderProps) {
-  const [containerWidth, setContainerWidth] = React.useState(0);
   const animatedValue = React.useRef(new Animated.Value(0)).current;
 
+  // Store mutable values in refs so PanResponder handlers always see latest values
+  const containerWidthRef = React.useRef(0);
+  const onValueChangeRef = React.useRef(onValueChange);
+  const minRef = React.useRef(min);
+  const maxRef = React.useRef(max);
+  const valueRef = React.useRef(value);
+  const startPositionRef = React.useRef(0);
+
+  React.useEffect(() => { onValueChangeRef.current = onValueChange; }, [onValueChange]);
+  React.useEffect(() => { minRef.current = min; maxRef.current = max; }, [min, max]);
+  React.useEffect(() => { valueRef.current = value; }, [value]);
+
+  // Sync thumb position when value prop or container size changes
   React.useEffect(() => {
-    if (containerWidth > 0) {
-      const position = ((value - min) / (max - min)) * containerWidth;
+    if (containerWidthRef.current > 0) {
+      const position = ((value - min) / (max - min)) * containerWidthRef.current;
       animatedValue.setValue(position);
     }
-  }, [value, containerWidth, min, max, animatedValue]);
+  }, [value, min, max, animatedValue]);
 
   const panResponder = React.useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
+      // Capture before parent ScrollView can steal the touch
+      onStartShouldSetPanResponderCapture: () => true,
       onPanResponderGrant: (evt) => {
-        const newPosition = evt.nativeEvent.locationX;
-        updateValue(newPosition);
+        const width = containerWidthRef.current;
+        if (width === 0) return;
+        // locationX is reliable at grant time (before movement begins)
+        const pos = Math.max(0, Math.min(evt.nativeEvent.locationX, width));
+        startPositionRef.current = pos;
+        const newValue = Math.round((pos / width) * (maxRef.current - minRef.current) + minRef.current);
+        onValueChangeRef.current(newValue);
+        animatedValue.setValue(pos);
       },
-      onPanResponderMove: (evt) => {
-        const newPosition = evt.nativeEvent.locationX;
-        updateValue(newPosition);
+      onPanResponderMove: (_evt, gestureState) => {
+        const width = containerWidthRef.current;
+        if (width === 0) return;
+        // Use gestureState.dx (cumulative delta from start) — always in a consistent
+        // coordinate space regardless of which child view dispatches the touch event
+        const pos = Math.max(0, Math.min(startPositionRef.current + gestureState.dx, width));
+        const newValue = Math.round((pos / width) * (maxRef.current - minRef.current) + minRef.current);
+        onValueChangeRef.current(newValue);
+        animatedValue.setValue(pos);
       },
     })
   ).current;
-
-  const updateValue = (position: number) => {
-    const clampedPosition = Math.max(0, Math.min(position, containerWidth));
-    const newValue = Math.round(
-      (clampedPosition / containerWidth) * (max - min) + min
-    );
-    onValueChange(newValue);
-    animatedValue.setValue(clampedPosition);
-  };
 
   const percentage = ((value - min) / (max - min)) * 100;
 
@@ -61,16 +78,14 @@ export function Slider({
       )}
       <View
         style={styles.track}
-        onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+        onLayout={(e) => { containerWidthRef.current = e.nativeEvent.layout.width; }}
         {...panResponder.panHandlers}
       >
         <View style={[styles.fill, { width: `${percentage}%` }]} />
         <Animated.View
           style={[
             styles.thumb,
-            {
-              transform: [{ translateX: animatedValue }],
-            },
+            { transform: [{ translateX: animatedValue }] },
           ]}
         />
       </View>

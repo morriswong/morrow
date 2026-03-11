@@ -18,7 +18,7 @@
       "bundleIdentifier": "com.morriswch.morrow",
       "backgroundModes": ["audio"],
       "entitlements": {
-        "aps-environment": "development"
+        "aps-environment": "production"
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -41,7 +41,7 @@
       "expo-router",
       "expo-font",
       ["expo-notifications", { "sounds": ["./assets/sounds/alarm_default.wav"] }],
-      ["expo-av", { "microphonePermission": false }]
+      ["expo-av", { "microphonePermission": "Allow $(PRODUCT_NAME) to record custom alarm sounds." }]
     ],
     "extra": {
       "router": {},

@@ -18,7 +18,11 @@ import { useAlarmStore } from '../stores';
 import {
   configureNotificationHandler,
   configureNotificationCategories,
+  requestPermissions,
   syncAllAlarmNotifications,
+  scheduleSnooze,
+  cancelAlarmNotification,
+  cancelSnoozeNotification,
 } from '../services';
 
 // ── Module-level setup (runs once on import) ────────────────────────────
@@ -49,6 +53,9 @@ export default function RootLayout() {
   // ── Notification setup ──────────────────────────────────────────────
 
   useEffect(() => {
+    // Ask for notification permission on first launch
+    requestPermissions();
+
     // Register notification categories (iOS action buttons)
     configureNotificationCategories();
 
@@ -61,13 +68,25 @@ export default function RootLayout() {
 
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        const data = response.notification.request.content.data;
-        if (data?.alarmId) {
-          router.push({
-            pathname: '/ring',
-            params: { id: data.alarmId as string },
-          });
+      async (response) => {
+        const alarmId = response.notification.request.content.data?.alarmId as string | undefined;
+        if (!alarmId) return;
+
+        const { actionIdentifier } = response;
+
+        if (actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
+          router.push({ pathname: '/ring', params: { id: alarmId } });
+        } else if (actionIdentifier === 'snooze') {
+          const alarm = useAlarmStore.getState().getAlarm(alarmId);
+          const minutes = alarm?.snoozeDuration ?? 5;
+          if (alarm && minutes > 0) await scheduleSnooze(alarm, minutes);
+        } else if (actionIdentifier === 'dismiss') {
+          await cancelAlarmNotification(alarmId);
+          await cancelSnoozeNotification(alarmId);
+          const alarm = useAlarmStore.getState().getAlarm(alarmId);
+          if (alarm && alarm.repeatDays.length === 0) {
+            useAlarmStore.getState().updateAlarm(alarmId, { isEnabled: false });
+          }
         }
       }
     );
@@ -78,13 +97,26 @@ export default function RootLayout() {
   // ── Cold-start: app launched from killed state via notification ──────
 
   useEffect(() => {
-    Notifications.getLastNotificationResponseAsync().then((response) => {
-      if (response?.notification.request.content.data?.alarmId) {
-        const alarmId = response.notification.request.content.data.alarmId as string;
-        router.push({
-          pathname: '/ring',
-          params: { id: alarmId },
-        });
+    Notifications.getLastNotificationResponseAsync().then(async (response) => {
+      if (!response) return;
+      const alarmId = response.notification.request.content.data?.alarmId as string | undefined;
+      if (!alarmId) return;
+
+      const { actionIdentifier } = response;
+
+      if (actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
+        router.push({ pathname: '/ring', params: { id: alarmId } });
+      } else if (actionIdentifier === 'snooze') {
+        const alarm = useAlarmStore.getState().getAlarm(alarmId);
+        const minutes = alarm?.snoozeDuration ?? 5;
+        if (alarm && minutes > 0) await scheduleSnooze(alarm, minutes);
+      } else if (actionIdentifier === 'dismiss') {
+        await cancelAlarmNotification(alarmId);
+        await cancelSnoozeNotification(alarmId);
+        const alarm = useAlarmStore.getState().getAlarm(alarmId);
+        if (alarm && alarm.repeatDays.length === 0) {
+          useAlarmStore.getState().updateAlarm(alarmId, { isEnabled: false });
+        }
       }
     });
   }, [router]);
