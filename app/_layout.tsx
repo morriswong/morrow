@@ -14,6 +14,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
 import { colors } from '../constants';
 import SplashOverlay from '../components/SplashOverlay';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useAlarmStore } from '../stores';
 import {
   configureNotificationHandler,
@@ -27,6 +28,27 @@ import {
 
 // ── Module-level setup (runs once on import) ────────────────────────────
 configureNotificationHandler();
+
+async function handleNotificationAction(
+  actionIdentifier: string,
+  alarmId: string,
+  router: ReturnType<typeof useRouter>,
+) {
+  if (actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
+    router.push({ pathname: '/ring', params: { id: alarmId } });
+  } else if (actionIdentifier === 'snooze') {
+    const alarm = useAlarmStore.getState().getAlarm(alarmId);
+    const minutes = alarm?.snoozeDuration ?? 5;
+    if (alarm && minutes > 0) await scheduleSnooze(alarm, minutes);
+  } else if (actionIdentifier === 'dismiss') {
+    await cancelAlarmNotification(alarmId);
+    await cancelSnoozeNotification(alarmId);
+    const alarm = useAlarmStore.getState().getAlarm(alarmId);
+    if (alarm && alarm.repeatDays.length === 0) {
+      useAlarmStore.getState().updateAlarm(alarmId, { isEnabled: false });
+    }
+  }
+}
 
 // Keep the native splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -64,32 +86,29 @@ export default function RootLayout() {
     syncAllAlarmNotifications(alarms);
   }, []);
 
+  // ── Foreground notification listener (alarm arrives while app is open) ──
+
+  useEffect(() => {
+    const subscription = Notifications.addNotificationReceivedListener((notification) => {
+      const data = notification.request.content.data;
+      const alarmId = data?.alarmId as string | undefined;
+      const type = data?.type as string | undefined;
+      if (alarmId && (type === 'alarm' || type === 'snooze')) {
+        router.push({ pathname: '/ring', params: { id: alarmId } });
+      }
+    });
+
+    return () => subscription.remove();
+  }, [router]);
+
   // ── Notification response listener (user taps notification) ─────────
 
   useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener(
-      async (response) => {
-        const alarmId = response.notification.request.content.data?.alarmId as string | undefined;
-        if (!alarmId) return;
-
-        const { actionIdentifier } = response;
-
-        if (actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
-          router.push({ pathname: '/ring', params: { id: alarmId } });
-        } else if (actionIdentifier === 'snooze') {
-          const alarm = useAlarmStore.getState().getAlarm(alarmId);
-          const minutes = alarm?.snoozeDuration ?? 5;
-          if (alarm && minutes > 0) await scheduleSnooze(alarm, minutes);
-        } else if (actionIdentifier === 'dismiss') {
-          await cancelAlarmNotification(alarmId);
-          await cancelSnoozeNotification(alarmId);
-          const alarm = useAlarmStore.getState().getAlarm(alarmId);
-          if (alarm && alarm.repeatDays.length === 0) {
-            useAlarmStore.getState().updateAlarm(alarmId, { isEnabled: false });
-          }
-        }
-      }
-    );
+    const subscription = Notifications.addNotificationResponseReceivedListener(async (response) => {
+      const alarmId = response.notification.request.content.data?.alarmId as string | undefined;
+      if (!alarmId) return;
+      await handleNotificationAction(response.actionIdentifier, alarmId, router);
+    });
 
     return () => subscription.remove();
   }, [router]);
@@ -101,23 +120,7 @@ export default function RootLayout() {
       if (!response) return;
       const alarmId = response.notification.request.content.data?.alarmId as string | undefined;
       if (!alarmId) return;
-
-      const { actionIdentifier } = response;
-
-      if (actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
-        router.push({ pathname: '/ring', params: { id: alarmId } });
-      } else if (actionIdentifier === 'snooze') {
-        const alarm = useAlarmStore.getState().getAlarm(alarmId);
-        const minutes = alarm?.snoozeDuration ?? 5;
-        if (alarm && minutes > 0) await scheduleSnooze(alarm, minutes);
-      } else if (actionIdentifier === 'dismiss') {
-        await cancelAlarmNotification(alarmId);
-        await cancelSnoozeNotification(alarmId);
-        const alarm = useAlarmStore.getState().getAlarm(alarmId);
-        if (alarm && alarm.repeatDays.length === 0) {
-          useAlarmStore.getState().updateAlarm(alarmId, { isEnabled: false });
-        }
-      }
+      await handleNotificationAction(response.actionIdentifier, alarmId, router);
     });
   }, [router]);
 
@@ -147,38 +150,40 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: colors.background },
-          animation: 'slide_from_right',
-        }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen
-          name="ring"
-          options={{
-            animation: 'fade',
-            gestureEnabled: false,
+      <ErrorBoundary>
+        <StatusBar style="light" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.background },
+            animation: 'slide_from_right',
           }}
-        />
-        <Stack.Screen
-          name="wakeup"
-          options={{
-            animation: 'fade',
-            gestureEnabled: false,
-          }}
-        />
-        <Stack.Screen
-          name="(modal)"
-          options={{
-            presentation: 'modal',
-            animation: 'slide_from_bottom',
-          }}
-        />
-      </Stack>
-      {showSplash && <SplashOverlay onFinish={handleSplashFinish} />}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen
+            name="ring"
+            options={{
+              animation: 'fade',
+              gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
+            name="wakeup"
+            options={{
+              animation: 'fade',
+              gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
+            name="(modal)"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+        </Stack>
+        {showSplash && <SplashOverlay onFinish={handleSplashFinish} />}
+      </ErrorBoundary>
     </GestureHandlerRootView>
   );
 }
